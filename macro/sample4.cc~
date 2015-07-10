@@ -1,0 +1,6 @@
+int sample4(){
+
+  MyApplication *app = dynamic_cast< MyApplication* >( gROOT->GetApplcation() );
+
+  return 0;
+}
