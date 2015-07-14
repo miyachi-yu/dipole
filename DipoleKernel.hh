@@ -3,6 +3,7 @@
 
 #include <Tranform/RTransform.hh>
 #include <string>
+#include <vector>
 /*
   Definition of the tarnsformation kernel: K(x,t)
   
@@ -25,14 +26,15 @@ https://drive.google.com/a/quark.kj.yamagata-u.ac.jp/file/d/0BwXqnrBuS6yDVHJqV3Z
 class DipoleKernel : public Transform::RTransform::Kernel {
 public:
 
-  DipoleKernel();
+  DipoleKernel();            // default constructor
 
-  virtual ~DipoleKernel();
+  virtual ~DipoleKernel();   // destructor
   
-  /*
-    f^{-1}(x) = pow( (x+1)/3, -0.5 )
-  */
+  //  f(x) = pow( (x+1)/3, -0.5 )
   double finv( const double& x );
+
+  // f(x) + f(-x)
+  double ftilde( const double& x );
   
   /*!
     Unit of the given r is nm and unit of return value is mT.
@@ -46,9 +48,14 @@ public:
   // t() in mT
   virtual double eval( const double& r );
 
-  double offset;
-
   std::string text();
+  
+  void offset( const double& v );
+  double offset(); // return mean of offset
+  
+private:
+  std::vector< double > lines_;        // ESR lines
+  
   
 };
 

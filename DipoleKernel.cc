@@ -2,10 +2,11 @@
 
 #include <cmath>
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 
-DipoleKernel::DipoleKernel() : offset( 0.0 ) {
+DipoleKernel::DipoleKernel() : lines_( 0 ) {
 }
 
 DipoleKernel::~DipoleKernel() {
@@ -16,6 +17,10 @@ double DipoleKernel::finv( const double& x ){
   if( x < -1.0 || x > 2.0 ) return 0.0;
   double v = x + 1.0;
   return ( v > 0.0 ? 1.0 / sqrt( v/3.0 ) : 0.0 );
+}
+
+double DipoleKernel::ftilde( const double& x ){
+  return finv( x ) + finv( - x );
 }
 
 /*!
@@ -31,16 +36,41 @@ double DipoleKernel::localField( const double& r ){
 // r in nm
 // t() in mT
 double DipoleKernel::eval( const double& r ){
+  if( ! ( r > 0.0 ) ) return 0.0;
   double lf = this->localField( r );
-  double v = ( r == 0 ? 0.0 : ( this->t() - this->offset ) / lf );
-  return M_PI * pow( r, 2.0 ) / 3.0 / fabs( lf ) *
-    ( this->finv( v ) + this->finv( -v ) ); 
+  double C = M_PI * pow( r, 2.0 ) / 3.0 / fabs( lf );
+  double fv = 0.0;
+  for( int i = 0; i < lines_.size(); i++ ){
+    fv += this->ftilde( ( this->t() - lines_[ i ] ) / lf );
+  }
+  return C * fv;
 }
 
 string DipoleKernel::text(){
   ostringstream ost;
-  ost << "K(r,t) = #frac{1}{6|A(r)|}#left(#frac{((H_{D}-"
-      << this->offset
-      << ")/A(r))+1}{3}#right)^{-#frac{1}{2}}";
+  ost << "K(r,t) = #frac{1}{6|A(r)|}#left(#frac{((t-H_{i})/A(r))+1}{3}#right)^{-#frac{1}{2}}";
+  ost << " where H_{i} =";
+  if( lines_.size() == 0 ){
+    ost << "0";
+  } else {
+    for( int i = 0; i < lines_.size(); i++ ){
+      ost << lines_[ i ];
+      if( i != lines_.size() - 1 ) ost << ", ";
+    }
+  }
   return ost.str();
+}
+
+void DipoleKernel::offset( const double& v ){
+  if( ! ( v > 0.0 ) ) return;
+  if( find( lines_.begin(), lines_.end(), v ) == lines_.end() )
+    lines_.push_back( v );
+}
+
+double DipoleKernel::offset(){
+  if( lines_.size() == 0 ) return 0.0;
+  if( lines_.size() == 1 ) return lines_[ 0 ];
+  double v = 0.0;
+  for( int i = 0; i < lines_.size(); i++ ) v += lines_[ i ];
+  return v / lines_.size();
 }
