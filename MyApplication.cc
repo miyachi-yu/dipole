@@ -321,6 +321,22 @@ void MyApplication::asym( const double& v ){
   this->update();
 }
 
+double MyApplication::amplitude(){
+  return rho_->A;
+}
+
+double MyApplication::mean(){
+  return rho_->mean;
+}
+
+double MyApplication::sigma(){
+  return rho_->sigma;
+}
+
+double MyApplication::asym(){
+  return rho_->asym;
+}
+
 void MyApplication::update(){
   
   rT_->upper( rho_->mean + 4.0 * rho_->sigma * rho_->asym );

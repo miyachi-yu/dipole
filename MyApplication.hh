@@ -44,6 +44,11 @@ public:
   void mean( const double& v );
   void sigma( const double& v );
   void asym( const double& v );
+
+  double amplitude();
+  double mean();
+  double sigma();
+  double asym();
   
   double& toffset();
   double toffset() const;
