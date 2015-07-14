@@ -62,9 +62,9 @@ MyApplication::MyApplication( int argc, char* argv[] ) :
   
   latex_->SetTextFont( 32 );
   latex_->SetTextSize( 0.03 );
-
-  k_->offset = args.get( "toffset", 0.0 );
-
+  
+  if( args.hasOpt( "toffset" ) ) k_->offset( args.get( "toffset", 0.0 ) );
+  
   this->update();
   
   tRange_[ 0 ] = args.get( "tmin", tRange_[ 0 ] );
@@ -139,14 +139,16 @@ void MyApplication::drawRho(){
 void MyApplication::drawI( ESR *esr ){
   shared_ptr<TGraph> gESR = esr->GetGraphInteg();
   // find maximum point
-  int iMax = 0; double ymax = 0.0; double ymax_x = 0; 
-  for( int i = 0; i < gESR->GetN(); i++ ){
-    double x, y;
-    gESR->GetPoint( i, x, y );
-    if( y > ymax ){ iMax = i; ymax = y ; ymax_x = x; }
+  if( this->toffset() == 0.0 ){
+    int iMax = 0; double ymax = 0.0; double ymax_x = 0; 
+    for( int i = 0; i < gESR->GetN(); i++ ){
+      double x, y;
+      gESR->GetPoint( i, x, y );
+      if( y > ymax ){ iMax = i; ymax = y ; ymax_x = x; }
+    }
+    this->toffset( ymax_x );
+    I0_ = ymax;
   }
-  this->toffset( ymax_x );
-  I0_ = ymax;
   if( gESR_ ) { delete gESR_; }
   gESR_ = dynamic_cast< TGraph* >( gESR->Clone() );
   if( gESR_ ){
@@ -159,13 +161,13 @@ void MyApplication::drawI(){
     
   if( c_ ) c_->cd( 2 );
 
-  double tmin = tRange_[ 0 ] + k_->offset;
-  double tmax = tRange_[ 1 ] + k_->offset;
+  double tmin = tRange_[ 0 ] + k_->offset();
+  double tmax = tRange_[ 1 ] + k_->offset();
 
   TGraph *g = new TGraph;
   
   // calculate value of the transfered function, g(t), at various t
-  double corr = 1.0 / (*rT_)( k_->offset );
+  double corr = 1.0 / (*rT_)( k_->offset() );
   for( double t = tmin; t < tmax; t += tstep_ ){
     //    double v = I0_ * corr * (*rT_)( t );
     double v = (*rT_)( t );
@@ -200,22 +202,22 @@ void MyApplication::drawI(){
   line_->SetLineStyle( 1 );
   line_->SetLineColor( kBlue );
   line_->DrawLine( dhcen, ymin, dhcen, ymax );
-  line_->DrawLine( 2.0 * k_->offset - dhcen, ymin,
-		   -dhcen + 2.0*k_->offset, ymax );
+  line_->DrawLine( 2.0 * k_->offset() - dhcen, ymin,
+		   -dhcen + 2.0*k_->offset(), ymax );
   
   double dhmin = this->hDlower();
   line_->SetLineStyle( 2 );
   line_->SetLineColor( kBlue + 2 );
   line_->DrawLine( dhmin, ymin, dhmin, ymax );
-  line_->DrawLine( 2.0 * k_->offset - dhmin, ymin,
-		   2.0 * k_->offset - dhmin, ymax );
+  line_->DrawLine( 2.0 * k_->offset() - dhmin, ymin,
+		   2.0 * k_->offset() - dhmin, ymax );
   
   double dhmax = this->hDupper();
   line_->SetLineStyle( 3 );
   line_->SetLineColor( kBlue - 2 );
   line_->DrawLine( dhmax, ymin, dhmax, ymax );
-  line_->DrawLine( 2.0 * k_->offset - dhmax, ymin,
-		   2.0 * k_->offset - dhmax, ymax );
+  line_->DrawLine( 2.0 * k_->offset() - dhmax, ymin,
+		   2.0 * k_->offset() - dhmax, ymax );
   
   double txx  = xmin + 0.6 * dx;
   latex_->DrawLatex( txx, 9.0 * dy + ymin, rho_->text().c_str() );
@@ -226,7 +228,7 @@ void MyApplication::drawI(){
 }
 
 void MyApplication::drawI( const double& tmin, const double& tmax ){
-  this->tRange( tmin - k_->offset, tmax - k_->offset );
+  this->tRange( tmin - k_->offset(), tmax - k_->offset() );
   this->drawI();
 }
 
@@ -271,25 +273,24 @@ void MyApplication::drawArgument( const double& x, const double& y,
 }
 
 double MyApplication::hDlower(){
-  return k_->offset + k_->localField( rho_->upper() );
+  return k_->offset() + k_->localField( rho_->upper() );
 }
 
 double MyApplication::hDcenter(){
-  return k_->offset + k_->localField( rho_->mean );
+  return k_->offset() + k_->localField( rho_->mean );
 }
 
 double MyApplication::hDupper(){
-  return k_->offset + k_->localField( rho_->lower() );
+  return k_->offset() + k_->localField( rho_->lower() );
 }
 
-double& MyApplication::toffset() { return k_->offset; }
-double MyApplication::toffset() const { return k_->offset; }
+double MyApplication::toffset() { return k_->offset(); }
 
 void MyApplication::toffset( const double& value ) {
-  k_->offset = value;
+  k_->offset( value );
   this->update();
 }
-  
+
 void MyApplication::nLeg( const int& n1, const int& n2 ){
   rT_->nLeg( n1, n2 );
 }
@@ -343,7 +344,7 @@ void MyApplication::update(){
   rT_->lower( rho_->mean - 4.0 * rho_->sigma );
   if( rT_->lower() < 0.0 ) rT_->lower( 0.0 );
   
-  double trange = 1.5 * fabs( this->hDupper() - k_->offset );
+  double trange = 1.5 * fabs( this->hDupper() - k_->offset() );
   tRange_[ 0 ] = -trange;
   tRange_[ 1 ] =  trange;
 

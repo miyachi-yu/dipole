@@ -50,8 +50,7 @@ public:
   double sigma();
   double asym();
   
-  double& toffset();
-  double toffset() const;
+  double toffset();
   void toffset( const double& value );
 
   void showArguments( TGraph *g );
