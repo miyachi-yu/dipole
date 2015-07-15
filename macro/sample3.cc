@@ -40,9 +40,7 @@ int sample3(){
   f1->SetLineColor( kMagenta );
   f1->SetLineStyle( 2 );
   f1->SetLineWidth( 2 );
-  f1->Draw( "SAME" );
 
-  
   //
   //  Data preparation
   //
