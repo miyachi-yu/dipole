@@ -19,8 +19,8 @@ public:
   virtual double operator()( const double& x );
   std::string text();
 
-  double upper() { return mean + asym * sigma; }
-  double lower() { return mean - sigma; }
+  double upper();
+  double lower();
   
   double A;
   double mean;

@@ -379,5 +379,8 @@ LineShape* MyApplication::lineShapeObj(){
   return lS;
 }
 
+double MyApplication::evalI( const double& t ){
+  return (*rT_)( t );
+}
 
 ClassImp( MyApplication )

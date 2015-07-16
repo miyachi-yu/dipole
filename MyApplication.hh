@@ -71,6 +71,8 @@ public:
   
   LineShape* lineShapeObj();
   
+  double evalI( const double& t );
+  
 private:
   static MyApplication* singleton_;
   

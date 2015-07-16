@@ -4,13 +4,13 @@
    Example for ESR data fitting. The parameters of asymmetric gausian 
    will be determined by fitting the ESR data.
    ---------------------------------------------------------------- */
-int sample3(){
+int sample7(){
 
   MyApplication *app = MyApplication::instance();
 
   // In order to reduce computation time, data point will be sampled
   // here one over 64 points will be used.
-  ESR esr( "cofeebean-a.txt", 64 );
+  ESR esr( "cofeebean-a.txt", 32 );
 
   // Tunning of numerical integration parameteres.
   app->precision( 0.0001 );
@@ -18,33 +18,18 @@ int sample3(){
   app->nLeg( 7, 8 );
 
   app->toffset( 328.87 );
-  app->amplitude( 80.2102 );
+  //  app->amplitude( 80.2102 );
+  app->amplitude( 50 );
   app->mean( 1.00307 );
   app->sigma( 0.0161825 );
   app->asym( 24.2989 );
   app->draw( &esr );
-
+  
   gPad->Update();
   
   //  double sig[2] = { 326.9, 330.9 };
   double sig[2] = { 327.5, 330.3 };
   
-  // get wrapper class object for TF1
-  LineShape* lS = app->lineShapeObj();
-  TF1 *f1 = new TF1( "lineShape", lS, sig[0], sig[1], 5, "LineShape" );
-  
-  // set initial values
-  f1->SetParameter( 0, app->amplitude() );
-  f1->SetParameter( 1, app->mean() );
-  f1->SetParameter( 2, app->sigma() );
-  f1->SetParameter( 3, app->asym()  );
-  f1->FixParameter( 4, 0.0   );            // offset constant
-
-  // style setting
-  f1->SetLineColor( kMagenta );
-  f1->SetLineStyle( 2 );
-  f1->SetLineWidth( 2 );
-
   //
   //  Data preparation
   //
@@ -52,7 +37,7 @@ int sample3(){
   
   // background shape determination
   double bg[2][2] = { {324.6, 326.0 }, {331.6, 332.1 } };
-
+  
   // prepare background data
   TGraph *gBG = new TGraph;
   for( int i = 0; i < g->GetN(); i++ ){
@@ -65,12 +50,12 @@ int sample3(){
       gBG->SetPoint( iNew, x, y );
     }
   }
-
+  
   gBG->SetMarkerColor( kOrange );
   gBG->SetMarkerStyle( 20 );
   gBG->Draw( "P" );
   gPad->Update();
-
+  
   // Parametize background shape with 2nd polynominal.
   // Parameters will be determine by fitting tails of the ESR spectrum
   TF1 *fBG = new TF1( "fBG", "pol2", sig[ 0 ], sig[ 1 ] );
@@ -93,14 +78,12 @@ int sample3(){
   gSig->Draw( "P" ); 
   gPad->Update();
   
-  // Full area: 324.6 - 332.0
-  // signal center: 328.9
-  // Signal area: 326.9 - 330.9
-
-  // fit the ESR signal with lineShape object
-  gSig->Fit( f1, "VNME", "", sig[0], sig[1] );
+  Fitter fitter;
+  fitter.fit( gSig );
+  
   
   app->draw();
+  gSig->Draw( "SAMEp" );
   
   return 0;
 }

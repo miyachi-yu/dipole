@@ -12,7 +12,7 @@ OBJS   = ESRData.o Rho.o MyKernel.o
 ## ----------------------------------------------------------------------- #
 ##                   ROOT Object Dictionary Management                     #
 ## ----------------------------------------------------------------------- #
-ROOTOBJS    = LineShape.o DipoleKernel.o KernelCore.o AGaus.o MyApplication.o ESR.o ESRHeader.o ESRHeaderElement.o
+ROOTOBJS    = Fitter.o LineShape.o DipoleKernel.o KernelCore.o MixedDensity.o AGaus.o MyApplication.o ESR.o ESRHeader.o ESRHeaderElement.o
 ROOTOBJ_HH  = $(patsubst %.o, %.hh, $(ROOTOBJS))
 ROOTLINKDEF = RootLinkDef.hh
 ROOTDICT_CC = RootObjDict.cc
@@ -50,7 +50,7 @@ LDLIBS += $(LIB_TRANSFORM) $(LIB_UTILITY)
 # ---------------------------------------------------------------------- #
 ROOTSYS = `root-config --prefix`
 CPPFLAGS += `root-config --cflags`
-LDLIBS   += `root-config --libs`
+LDLIBS   += `root-config --libs` -lMinuit
 # LDLIBS   += `root-config --glibs`
 # LDLIBS   += -lMinuit
 
