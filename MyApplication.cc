@@ -186,7 +186,7 @@ void MyApplication::drawI(){
        << rT_->upper()
        << "}_{"
        << rT_->lower()
-       << "} K(r,t) #rho(r) 2 #pi r^{2} dr";
+       << "} #tilde{K}(r,t) #tilde{#rho}(r) dr";
   
   g->GetYaxis()->SetTitle( ostr.str().c_str() );
   
@@ -221,7 +221,8 @@ void MyApplication::drawI(){
   
   double txx  = xmin + 0.6 * dx;
   latex_->DrawLatex( txx, 9.0 * dy + ymin, rho_->text().c_str() );
-  latex_->DrawLatex( txx, 7.8 * dy + ymin, k_->text().c_str() );
+  latex_->DrawLatex( txx, 7.8 * dy + ymin, "#tilde{#rho}(r)=#frac{#pi r^{2}}{3|A(r)|}#rho(r)" );
+  latex_->DrawLatex( txx, 6.6 * dy + ymin, k_->text().c_str() );
 
   if( gESR_ ) { gESR_->Draw( "l" ); }
   

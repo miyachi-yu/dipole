@@ -68,7 +68,7 @@ public:
 
   AGaus* rho() { return rho_; } 
   DipoleKernel* kernel(){ return k_; }
-
+  
   LineShape* lineShapeObj();
   
 private:
