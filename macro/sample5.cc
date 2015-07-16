@@ -20,14 +20,14 @@ int sample5(){
   // by repeating toffset methods, the new esr line positions are added.
   // (not replacing the stored value)
   app->toffset( 319.75 );
-  app->toffset( 321.35 );
+  app->toffset( 321.3 );
   app->toffset( 322.84 );
 
   // configure density distribution
-  app->amplitude( 46.66 );
-  app->mean( 0.8989 );
-  app->sigma( 0.0501 );
-  app->asym( 11.28 );
+  app->amplitude( 47.1337 );
+  app->mean( 0.9038 );
+  app->sigma( 0.048 );
+  app->asym( 11.68 );
 
   // get wrapper class object for TF1
   double sig[2] = { 318.0, 325.0 };
