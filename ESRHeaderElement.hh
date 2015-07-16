@@ -8,12 +8,11 @@
 
 #include "TObject.h"
 
-/*
-  add _ at the end of name to represent private member.
+/**
+   Classes manage header infomation.
+   See each class definition.
  */
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// ------------------------------------------------------------
+
 class ESRHeaderElement : public TObject
 {
 protected:
@@ -131,41 +130,74 @@ class ESRHeaderSP : public ESRHeaderElement
   std::string rcv_mode2_;
   std::string reserved_area_; // RESRVD
 
+  /**
+     sweep structure.
+   */
   struct Sweep
   {
+    /** sweep control  */
     std::string control = ""; //swquit
-    double time = 0; // unit is second(?)
-    std::pair<double, double> width = {0, 0}; // (fine, coarse)
-    double mod_freq = 0; // modulation frequency
-    std::pair<double, double> phase = {0, 0}; // (fine, coarse);
-    std::pair<double, double> phase2 = {0, 0}; // (fine, coarse);
-    std::pair<double, double> mod_width = {0, 0}; // (fine, coarse)
-    std::pair<double, double> amp1 = {0, 0}; // (fine, coarse)
-    std::pair<double, double> amp2 = {0, 0}; // (fine, coarse)
-    double tc1 = 0; // time constant1
-    double tc2 = 0; // time constant2
-  } SW;
+    /** sweep time. unit is second.   ...maybe. not sure... */
+    double time = 0;
+    /** sweep width {fine, coarse} */
+    std::pair<double, double> width = {0, 0};
+    /** modulation frequency  */
+    double mod_freq = 0;
+    /** phase {fine, coarse} */
+    std::pair<double, double> phase = {0, 0};
+    /** phase2 {fine, coasrse} */
+    std::pair<double, double> phase2 = {0, 0};
+    /** modulation width {fine, coarse}  */
+    std::pair<double, double> mod_width = {0, 0};
+    /** amplitude {fine, coarse} */
+    std::pair<double, double> amp1 = {0, 0};
+    /** amplitude2 {fine, coarse} */
+    std::pair<double, double> amp2 = {0, 0};
+    /** time constant */
+    double tc1 = 0;
+    /** time constant2 */
+    double tc2 = 0;
+  } SW_;
 
+  /**
+     microwave structure.
+   */
   struct MicroWave
   {
+    /** micro frequency */
     double freq = 0;
+    /** micro freq. unit */
     std::string freq_unit = "";
+    /** micro power */
     double power = 0;
+    /** micro power unit */
     std::string pwr_unit = "";
+    /** micro phase */
     int phase = 0;
+    /** micro coupling */
     int coupling = 0;
+    /** micro 30db */
     bool is_30db = false;
+    /** micro ref */
     bool is_ref= false;
+    /** micro gunp */
     bool is_gunp = false;
-  } MW;
+  } MW_;
 
+  /**
+     Temperature structure
+   */
   struct Temperature
   {
+    /** vt type */
     std::string vt_type = ""; // --
+    /** temp. control */
     bool temp_control = false;
-    double temperature = 300; // RT is assumed to be 300 Kelvin
+    /** temperature */
+    double temperature = 20; // Celcius
+    /** temperature unit */
     std::string tmpr_unit = ""; //
-  } TMPR;
+  } TMPR_;
 
   // method
   virtual void set_val(const std::map<std::string, std::string>&);

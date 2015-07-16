@@ -19,7 +19,9 @@ class ESRHeader;
 // typedef: useless...
 using pgraph = std::shared_ptr<TGraph>;
 
-
+/**
+   structure managing graph style like color, line type, and etc.
+ */
 struct GraphStyle
 {
   GraphStyle();
@@ -33,9 +35,29 @@ struct GraphStyle
   int marker_size;// = 1;
 };
 
+/**
+  # how to kill noisy message?
+  gIgnoreErrorLevel = gWarning;
 
+  # Coding rule
+  Explicitly write namespace. e.g., std::....
+
+  ## variable
+  * small_case_with_underscore
+  * private: '_' at the end of variable
+  * public : no restriction
+
+  ## function
+  * CamelCase (like ROOT)
+  * public function, small_case_with_underscore is allowed (but minimum use)
+
+  # comment
+  To generate help by Doxygen...
+ */
 class ESR : public TObject
 {
+  static int nlines_header_txt_file;
+
   int file_type_;
   std::shared_ptr<ESRHeader> esr_header_;
 

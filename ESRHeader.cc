@@ -31,50 +31,13 @@ ESRHeader::~ESRHeader()
   header_dt_.reset();
 }
 
-// static method
-int ESRHeader::CheckFileFormatType(std::ifstream& ifs)
-{
-    /*
-    ## GOOD file
-    $ cat data.txt
-    ===== Data Head ===================================
-    file name .....
-
-    ## BAD file
-    $ cat data.txt
-    waves=1 length=65252 data=CH1/2
-    .....
-
-    ## file type
-    0 : normal file
-    1 : wave format file
-    2 : other file
-   */
-  ifs.seekg(ifs.beg);
-  std::string buf;
-  std::getline(ifs, buf);
-  ifs.seekg(ifs.beg);
-
-  if(buf.find("Data Head") != buf.npos)
-    return 0;
-  else if(buf.find("wave") != buf.npos)
-    {
-      ESRHeader{}.Info("CheckFileFormatType", "wave file format");
-      return 1;
-    }
-  else
-    {
-      ESRHeader{}.Warning("CheckFileFormatType", "Strange file format");
-      return 2;
-    }
-}
 
 // getter. return copy
 std::shared_ptr<ESRHeaderDH> ESRHeader::GetDataHead() const {return header_dh_;}
 
 std::shared_ptr<ESRHeaderGP> ESRHeader::GetGeneralParameter() const { return header_gp_;}
 
-std::shared_ptr<ESRHeaderSP> ESRHeader::GetSpectometerParameter() const {return header_sp_;}
+std::shared_ptr<ESRHeaderSP> ESRHeader::GetSpectrometerParameter() const {return header_sp_;}
 
 std::shared_ptr<ESRHeaderAP> ESRHeader::GetAcquisitionParameter() const {return header_ap_;}
 
@@ -99,6 +62,7 @@ void ESRHeader::SetXrange(std::pair<double, double> val)
 
 void ESRHeader::SetAmplitude(std::pair<double, double> val, int type)
 {
+  // little bit overcost. Passing copies is more simple way.
   header_sp_->SetAmplitude(std::forward<std::pair<double, double>>(val),
                            std::forward<int>(type));
 }

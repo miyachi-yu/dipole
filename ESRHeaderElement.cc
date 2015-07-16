@@ -11,9 +11,6 @@ ClassImp(ESRHeaderAP)
 ClassImp(ESRHeaderDT)
 
 
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// ------------------------------------------------------------
 ESRHeaderElement::ESRHeaderElement()
 {}
 
@@ -22,6 +19,11 @@ ESRHeaderElement::ESRHeaderElement(const std::map<std::string, std::string>& key
   set_val(key_val);
 }
 
+/**
+   subtract string by specified position.
+   If position is greater than string size, just returning input string.
+   In other case, behaving as std::string::substr()
+ */
 std::string ESRHeaderElement::mysubstr(std::string val, size_t pos)
 {
   if(pos > val.size())
@@ -30,6 +32,14 @@ std::string ESRHeaderElement::mysubstr(std::string val, size_t pos)
     return val.substr(pos);
 }
 
+/**
+   By specifiying two positions, subtract string.
+   Python implimentation, it looks like:
+   \code{.py}
+   def mysubstr(val, pos1, pos2):
+       return val[pos1:pos2]
+   \endcode
+ */
 std::string ESRHeaderElement::mysubstr(std::string val, size_t pos1, size_t pos2)
 {
   if(pos1 > pos2)
@@ -42,7 +52,11 @@ std::string ESRHeaderElement::mysubstr(std::string val, size_t pos1, size_t pos2
 }
 
 
-// helper functions
+/**
+   convert string to string.
+   This returns value corresponding to key in the map.
+   If no key found, returning empty string.
+ */
 std::string ESRHeaderElement::mystos(const std::map<std::string, std::string>& key_val,
                                      std::string key)
 {
@@ -52,6 +66,11 @@ std::string ESRHeaderElement::mystos(const std::map<std::string, std::string>& k
     return std::string{""};
 }
 
+/**
+   convert string to integer.
+   string is the key's value of map.
+   Info message raise if failing to convert.
+ */
 int ESRHeaderElement::mystoi(const std::map<std::string, std::string>& key_val,
                              std::string key)
 {
@@ -85,6 +104,9 @@ int ESRHeaderElement::mystoi(const std::string& val)
     }
 }
 
+/**
+   like mystoi, convert string to double.
+ */
 double ESRHeaderElement::mystod(const std::map<std::string, std::string>& key_val,
                                 std::string key)
 {
@@ -117,10 +139,12 @@ double ESRHeaderElement::mystod(const std::string& val)
     }
 }
 
-
 void ESRHeaderElement::set_val(const std::map<std::string, std::string>&)
 {}; // virtual. override by derived class
 
+/**
+   print values. This will be called by ESRHeader::Print.
+ */
 void ESRHeaderElement::Print(Option_t*) const
 {
   std::cout << "overrideしね❤" << std::endl;
@@ -137,6 +161,9 @@ ESRHeaderDH::ESRHeaderDH() :
   y_unit_(""), x_view_(0, 0), y_view_(0, 0), type_("")
 {}
 
+/**
+   The class treats Data Header part.
+ */
 ESRHeaderDH::ESRHeaderDH(const std::map<std::string, std::string>& key_val) :
   ESRHeaderElement(key_val),
   file_name_(""), data_number_(0), data_length_(0), data_sort_(""),
@@ -196,6 +223,9 @@ ESRHeaderGP::ESRHeaderGP()
     version_(""), date_(""), origin_file_(""), prev_file_("")
 {}
 
+/**
+   The class treats General Parameter part.
+ */
 ESRHeaderGP::ESRHeaderGP(const std::map<std::string, std::string>& key_val)
   : ESRHeaderElement(key_val), title_(), sample_name_(""), comment_(""), system_name_(""),
     version_(""), date_(""), origin_file_(""), prev_file_("")
@@ -234,12 +264,16 @@ void ESRHeaderGP::Print(Option_t*) const
 // ------------------------------------------------------------
 ESRHeaderSP::ESRHeaderSP()
   : ESRHeaderElement(), type_(""), center_field_(0), zero_(0), zero2_(0),
-    rcv_mode_(""), reserved_area_(""), SW(), MW(), TMPR()
+    rcv_mode_(""), reserved_area_(""), SW_(), MW_(), TMPR_()
 {}
 
+/**
+   The class treats Spectrometer Parameters part.
+   Three struct are defined: Sweep, MicroWave, and Temperature.
+ */
 ESRHeaderSP::ESRHeaderSP(const std::map<std::string, std::string>& key_val)
   : ESRHeaderElement(key_val), type_(""), center_field_(0), zero_(0), zero2_(0),
-    rcv_mode_(""), reserved_area_(""), SW(), MW(), TMPR()
+    rcv_mode_(""), reserved_area_(""), SW_(), MW_(), TMPR_()
 {
   set_val(key_val);
 }
@@ -252,51 +286,54 @@ void ESRHeaderSP::set_val(const std::map<std::string, std::string>& key_val)
   center_field_ = mystod(mysubstr(mystos(key_val, "center field"), 2));
 
   // sweep parameters
-  SW.control = mysubstr(mystos(key_val, "sweep control"), 2);
-  SW.time = mystod(mysubstr(mystos(key_val, "sweep time"), 2));
-  SW.width = {mystod(mysubstr(mystos(key_val, "sweep width(fine)"), 2)),
+  SW_.control = mysubstr(mystos(key_val, "sweep control"), 2);
+  SW_.time = mystod(mysubstr(mystos(key_val, "sweep time"), 2));
+  SW_.width = {mystod(mysubstr(mystos(key_val, "sweep width(fine)"), 2)),
               mystod(mysubstr(mystos(key_val, "sweep width(coar)"), 2))};
-  SW.mod_freq = mystod(mysubstr(mystos(key_val, "modulation freq."), 2));
-  SW.phase = {mystod(mysubstr(mystos(key_val, "phase"), 2)),
+  SW_.mod_freq = mystod(mysubstr(mystos(key_val, "modulation freq."), 2));
+  SW_.phase = {mystod(mysubstr(mystos(key_val, "phase"), 2)),
               mystod(mysubstr(mystos(key_val, "phase (fine)"), 2))};
-  SW.phase2 = {mystod(mysubstr(mystos(key_val, "phase2 (fine)"), 2)), 0};
-  SW.mod_width = {mystod(mysubstr(mystos(key_val, "mod. width(fine)"),2)),
+  SW_.phase2 = {mystod(mysubstr(mystos(key_val, "phase2 (fine)"), 2)), 0};
+  SW_.mod_width = {mystod(mysubstr(mystos(key_val, "mod. width(fine)"),2)),
                   mystod(mysubstr(mystos(key_val, "mod. width(coarse)"),2))};
-  SW.amp1 = {mystod(mysubstr(mystos(key_val, "amplitude(fine)"), 2)),
+  SW_.amp1 = {mystod(mysubstr(mystos(key_val, "amplitude(fine)"), 2)),
              mystod(mysubstr(mystos(key_val, "amplitude(coarse)"),2))};
-  SW.amp2 = {mystod(mysubstr(mystos(key_val, "amplitude2(fine)"), 2)),
+  SW_.amp2 = {mystod(mysubstr(mystos(key_val, "amplitude2(fine)"), 2)),
              mystod(mysubstr(mystos(key_val, "amplitude2(coars)"), 2))};
-  SW.tc1 = mystod(mysubstr(mystos(key_val, "time constant"), 2));
-  SW.tc2 = mystod(mysubstr(mystos(key_val, "time constant2"), 2));
+  SW_.tc1 = mystod(mysubstr(mystos(key_val, "time constant"), 2));
+  SW_.tc2 = mystod(mysubstr(mystos(key_val, "time constant2"), 2));
 
   // zero
   zero_ = mystoi(mysubstr(mystos(key_val, "zero"), 2));
   zero2_ = mystoi(mysubstr(mystos(key_val, "zero2"), 2));
 
   // microwve
-  MW.freq = mystod(mysubstr(mystos(key_val, "micro frequency"), 2));
-  MW.freq_unit = mysubstr(mystos(key_val, "micro freq. unit"), 2);
-  MW.power = mystod(mysubstr(mystos(key_val, "micro power"), 2));
-  MW.pwr_unit = mysubstr(mystos(key_val, "micro power unit"), 2);
-  MW.phase = mystoi(mysubstr(mystos(key_val, "micro phase"), 2));
-  MW.coupling = mystoi(mysubstr(mystos(key_val, "micro coupling"), 2));
-  MW.is_30db = (mysubstr(mystos(key_val, "micro 30db"), 2) == "on");
-  MW.is_ref = (mysubstr(mystos(key_val, "micro ref"), 2) == "on");
-  MW.is_gunp = (mysubstr(mystos(key_val, "micro gunp"), 2) == "on");
+  MW_.freq = mystod(mysubstr(mystos(key_val, "micro frequency"), 2));
+  MW_.freq_unit = mysubstr(mystos(key_val, "micro freq. unit"), 2);
+  MW_.power = mystod(mysubstr(mystos(key_val, "micro power"), 2));
+  MW_.pwr_unit = mysubstr(mystos(key_val, "micro power unit"), 2);
+  MW_.phase = mystoi(mysubstr(mystos(key_val, "micro phase"), 2));
+  MW_.coupling = mystoi(mysubstr(mystos(key_val, "micro coupling"), 2));
+  MW_.is_30db = (mysubstr(mystos(key_val, "micro 30db"), 2) == "on");
+  MW_.is_ref = (mysubstr(mystos(key_val, "micro ref"), 2) == "on");
+  MW_.is_gunp = (mysubstr(mystos(key_val, "micro gunp"), 2) == "on");
 
   // temperature
-  TMPR.vt_type = (mystos(key_val, "vt type"));
-  TMPR.temp_control = (mystos(key_val, "temp. control") == "on");
-  TMPR.temperature = (mystos(key_val, "temperature").find("RT") != std::string::npos)?
-    300 : mystod(mystos(key_val, "temperature"));
-  TMPR.tmpr_unit = mystos(key_val, "temperature unit");
+  TMPR_.vt_type = (mystos(key_val, "vt type"));
+  TMPR_.temp_control = (mystos(key_val, "temp. control") == "on");
+  TMPR_.temperature = (mystos(key_val, "temperature").find("RT") != std::string::npos)?
+    20 : mystod(mystos(key_val, "temperature"));
+  TMPR_.tmpr_unit = mystos(key_val, "temperature unit");
 }
 
-ESRHeaderSP::Sweep ESRHeaderSP::GetSW() const {return SW;};
-ESRHeaderSP::MicroWave ESRHeaderSP::GetMW() const {return MW;};
-ESRHeaderSP::Temperature ESRHeaderSP::GetTMPR() const {return TMPR;};
+ESRHeaderSP::Sweep ESRHeaderSP::GetSW() const {return SW_;};
+ESRHeaderSP::MicroWave ESRHeaderSP::GetMW() const {return MW_;};
+ESRHeaderSP::Temperature ESRHeaderSP::GetTMPR() const {return TMPR_;};
 
 
+/**
+   get amplitude. There are two types: 1 and 2.
+ */
 std::pair<double, double> ESRHeaderSP::GetAmplitude(int type) const
 {
   if(type < 1 or type > 2)
@@ -305,7 +342,7 @@ std::pair<double, double> ESRHeaderSP::GetAmplitude(int type) const
       type = 1;
     }
 
-  return (type == 1)? this->SW.amp1 : this->SW.amp2;
+  return (type == 1)? this->SW_.amp1 : this->SW_.amp2;
 }
 
 void ESRHeaderSP::SetAmplitude(std::pair<double, double> amp, int type)
@@ -317,32 +354,35 @@ void ESRHeaderSP::SetAmplitude(std::pair<double, double> amp, int type)
     }
 
   if(type == 1)
-    this->SW.amp1 = amp;
+    this->SW_.amp1 = amp;
   else if(type == 2)
-    this->SW.amp2 = amp;
+    this->SW_.amp2 = amp;
 
   return;
 }
 
+/**
+   get gain. gain = (amp. fine) x 10^(amp. coarse)
+ */
 double ESRHeaderSP::GetGain() const
 {
-  return SW.amp1.first * std::pow(10, SW.amp1.second);
+  return SW_.amp1.first * std::pow(10, SW_.amp1.second);
 }
 
 
 void ESRHeaderSP::Print(Option_t*) const
 {
   std::cout << "Sweep"  << std::endl
-            << "* time: " << SW.time << std::endl
-            << "* width: " << SW.width.first << ", " << SW.width.second << std::endl
-            << "* amp: " << SW.amp1.first << " x 10^" << SW.amp1.second << std::endl
-            << "* time constant" << SW.tc1 << std::endl
+            << "* time: " << SW_.time << std::endl
+            << "* width: " << SW_.width.first << ", " << SW_.width.second << std::endl
+            << "* amp: " << SW_.amp1.first << " x 10^" << SW_.amp1.second << std::endl
+            << "* time constant" << SW_.tc1 << std::endl
             << "Microwave" << std::endl
-            << "* frequency: " << MW.freq << " " << MW.freq_unit << std::endl
-            << "* power: " << MW.power << " " << MW.pwr_unit << std::endl
+            << "* frequency: " << MW_.freq << " " << MW_.freq_unit << std::endl
+            << "* power: " << MW_.power << " " << MW_.pwr_unit << std::endl
             << "Temperature" << std::endl
-            << "* control is on? " << std::boolalpha << TMPR.temp_control << std::endl
-            << "* temperature: " << TMPR.temperature << " " << TMPR.tmpr_unit << std::endl;
+            << "* control is on? " << std::boolalpha << TMPR_.temp_control << std::endl
+            << "* temperature: " << TMPR_.temperature << " " << TMPR_.tmpr_unit << std::endl;
 }
 
 
@@ -356,6 +396,9 @@ ESRHeaderAP::ESRHeaderAP()
     ref_file_name_(""), reserved_char_("")
 {}
 
+/**
+   The class treats Acquisition Parameter part.
+ */
 ESRHeaderAP::ESRHeaderAP(const std::map<std::string, std::string>& key_val)
   : ESRHeaderElement(key_val), accumu_count_(0), delay_time_(0), interval_time_(0),
     reserved_int_(0), sampling_time_(0), reserved_float_(0), accumu_mode_(""),
@@ -394,6 +437,9 @@ ESRHeaderDT::ESRHeaderDT()
   : ESRHeaderElement(), length_(0)
 {}
 
+/**
+   The class treats Esr Data part.
+ */
 ESRHeaderDT::ESRHeaderDT(const std::map<std::string, std::string>& key_val)
   : ESRHeaderElement(key_val), length_(0)
 {

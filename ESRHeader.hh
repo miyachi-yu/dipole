@@ -10,7 +10,22 @@
 
 #include "TObject.h"
 
-// (rather) read-only class. no setter.
+/**
+   Header objects management class.
+   This has five sub-header objects.
+   Each of them treats header infomation:
+   - Data Head
+   - General Parameter
+   - Spectrometer Parameters
+   - Acquisition Parameters
+   - Esr Data
+
+   N.B. In the text file Acquisition Parameters is written as "Aquisition Parameters":
+   This is, say misspelling...
+
+   Let's call the function that returns the shared pointer of corresponding header object:
+   e.g., GetDataHead() returns shared pointer of ESRHeaderDH.
+ */
 class ESRHeader : public TObject
 {
   std::shared_ptr<ESRHeaderDH> header_dh_;
@@ -25,8 +40,6 @@ public:
   ESRHeader(const ESRHeader&) = default;
   ~ESRHeader();
 
-  static int CheckFileFormatType(std::ifstream&);
-
   // getter
   int GetDataLength() const;
   std::string GetDate() const;
@@ -36,7 +49,7 @@ public:
 
   std::shared_ptr<ESRHeaderDH> GetDataHead() const;
   std::shared_ptr<ESRHeaderGP> GetGeneralParameter() const;
-  std::shared_ptr<ESRHeaderSP> GetSpectometerParameter() const;
+  std::shared_ptr<ESRHeaderSP> GetSpectrometerParameter() const;
   std::shared_ptr<ESRHeaderAP> GetAcquisitionParameter() const;
   std::shared_ptr<ESRHeaderDT> GetEsrData() const;
 

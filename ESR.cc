@@ -7,7 +7,8 @@
 #include <stdexcept>
 #include <iomanip>
 #include <algorithm>
-#include <time.h>
+#include <ctime>   // time_t, tm
+#include <cstring> // memset
 
 #include "TError.h"
 #include "TGraph.h"
@@ -36,12 +37,8 @@ GraphStyle::GraphStyle(const std::tuple<int, int, int, int, int, int>& conf) :
 {}
 
 
-/**
-   詳細はREADME.md．
- */
-
-
 // static variables
+int ESR::nlines_header_txt_file = 77; // private
 std::string ESR::date_format = "%Y/%m/%d %H:%M"; //   ~ is removed.
 std::string ESR::x_axis_title = "Magnetic field (mT)";
 std::string ESR::y_axis_title = "Amplitude";
@@ -51,8 +48,12 @@ GraphStyle ESR::gs_sig_imag = {412, 1};
 GraphStyle ESR::gs_sig_imag_integ = {807, 2};
 
 
-
 // constructors
+/**
+   Default constructor.
+
+   Info message is printed out if gIgnoreErrorLevel < gInfo
+ */
 ESR::ESR() :
   file_type_(-1), esr_header_(std::make_shared<ESRHeader>()),
   file_path_(""),data_length_(-1), reduction_factor_(0),
@@ -65,6 +66,15 @@ ESR::ESR() :
 }
 
 // normal
+/**
+   Normal constructor.
+   @param reduction_factor how many points are merged every reduction factor.
+   Every reduction factor, data points are grouped, calculating mean value for x nad y points.
+
+   File can be text file or ROOT file.
+   There are two format for text file: BOTH type is accepted.
+   Raw binary data is acceptable.
+ */
 ESR::ESR(std::string file_path, int reduction_factor) :
   file_type_(-1), file_path_(file_path), data_length_(0), reduction_factor_(reduction_factor),
   xrange_{0, 0}, yrange_{0, 0}, date_(""), gain_(0),
@@ -74,13 +84,22 @@ ESR::ESR(std::string file_path, int reduction_factor) :
 {
   Info("ESR(std::string, int)", "cnstr");
 
-  std::ifstream ifs(file_path_.c_str());
+  std::ifstream ifs(file_path_.c_str(), std::ifstream::binary);
   if(not CheckInputFile(ifs))
     return;
 
   CheckFileFormatType(ifs);
 
-  if(file_type_ < 2)
+  if(file_type_ == -1)     // other file
+    {
+      return; // exit constructor
+    }
+  else if(file_type_ == 2) // ROOT file
+    {
+      ifs.close();
+      LoadFromROOTFile();
+    }
+  else if(file_type_ != 2) // normal, wave format, and binary file
     {
       ifs.seekg(ifs.beg);
       raw_header_ = std::move(ParseHeader(ifs));
@@ -89,19 +108,20 @@ ESR::ESR(std::string file_path, int reduction_factor) :
       ParseData(ifs);
       ifs.close();
     }
-  else if(file_type_ == 2)
-    {
-      ifs.close();
-      LoadFromROOTFile();
-    }
 
+  // reduction and integral
   CheckReductionFactor();
   ReduceData();
   IntegrateData();
   MakeAllGraphs();
 }
 
-// copy constructor
+/**
+   Copy constructor
+
+   This is the practical and basic impliment.
+   See the link at the move constructor.
+ */
 ESR& ESR::operator=(const ESR& esr)
 {
   Info("operator=(const ESR&)", "copy");
@@ -175,14 +195,28 @@ ESR& ESR::operator=(const ESR& esr)
   return *this;
 }
 
+/**
+   copy constructor
+
+   \code{.cpp}
+   ESR esr1 {"data1.txt"};
+   auto esr2 = esr1;
+   \endcode
+ */
 ESR::ESR(const ESR& esr)
 {
   Info("ESR(const ESR&)", "operator=(const ESR&) is called.");
   *this = esr;
 }
 
-// http://qiita.com/termoshtt/items/3397c149bf2e4ce07e6c#move-assignment-operator-%E7%A7%BB%E5%8B%95%E4%BB%A3%E5%85%A5%E6%BC%94%E7%AE%97%E5%AD%90
+//
 // move
+/**
+   move operator (constructor)
+
+   steal enerything from original object.
+   This is the practical impliment. see <a target="_blank" href="http://qiita.com/termoshtt/items/3397c149bf2e4ce07e6c#move-assignment-operator-%E7%A7%BB%E5%8B%95%E4%BB%A3%E5%85%A5%E6%BC%94%E7%AE%97%E5%AD%90">Qiita</a> or <a target="_blank" href="https://msdn.microsoft.com/ja-jp/library/dd293665.aspx">MSDN</a>
+ */
 ESR& ESR::operator=(ESR&& esr) noexcept
 {
   Info("& operator=(ESR&&)", "move");
@@ -242,33 +276,51 @@ ESR& ESR::operator=(ESR&& esr) noexcept
   return *this;
 }
 
+/**
+   move.
+
+   \code{.cpp}
+   ESR esr1{"data.txt"};
+   auto esr2 = std::move(esr1);
+   \endcode
+ */
 ESR::ESR(ESR&& esr) noexcept
 {
   Info("ESR(ESR&&)", "operator=(ESR&&) is called.");
   *this = std::move(esr);
 }
 
+/**
+   destructor
+
+   TGraph objects will be deleted safely and automatically
+   IF there is no reference.
+ */
 ESR::~ESR()
 {
   Info("~ESR()", "delete cnstr");
 
-  // automatically destorated.
-  // // reset! reset!! reset!!!
-  // std::cout << "is unique? " << graph_.unique() << std::endl;
-  // graph_.reset();
-  // graph_norm_.reset();
-  // graph_integ_.reset();
-  // graph_norm_integ_.reset();
-  // graph_imag_.reset();
-  // graph_imag_norm_.reset();
-  // graph_imag_integ_.reset();
-  // graph_imag_norm_integ_.reset();
+  // decrement reference count.
+  // If there are objects refering to resource, destructor of TGraph would not be called.
+  graph_.reset();
+  graph_norm_.reset();
+  graph_integ_.reset();
+  graph_norm_integ_.reset();
+  graph_imag_.reset();
+  graph_imag_norm_.reset();
+  graph_imag_integ_.reset();
+  graph_imag_norm_integ_.reset();
 }
 
 // helper function
+/**
+   trim space, tab, cariiage return and line feed.
+
+   See <a href="http://www.toptip.ca/2010/03/trim-leading-or-trailing-white-spaces.html"
+   target="_blank">sample</a>
+ */
 std::string ESR::trim(const std::string& s)
 {
-  // http://www.toptip.ca/2010/03/trim-leading-or-trailing-white-spaces.html
   auto p = s.find_first_not_of(" \t\r\n");
   std::string st;
   if(p != s.npos)
@@ -283,6 +335,9 @@ std::string ESR::trim(const std::string& s)
   return st;
 }
 
+/**
+   replace 'rep' to 'to' in 's'
+ */
 std::string ESR::replace(const std::string& s, const char rep, const char to)
 {
   std::string ss{s}; // copy
@@ -295,6 +350,12 @@ std::string ESR::replace(const std::string& s, const char rep, const char to)
   return ss;
 }
 
+/**
+   parse header
+
+   Change process according to file type.
+   This may be done by another class because this code is little bit lengthy...
+ */
 std::map<std::string, std::string> ESR::ParseHeader(std::ifstream& ifs)
 {
   if(file_type_ < 0)
@@ -307,19 +368,22 @@ std::map<std::string, std::string> ESR::ParseHeader(std::ifstream& ifs)
   std::string buf;
   if(file_type_ == 0)
     {
-      for(auto i = 0; i < 77; ++i)
+      /* normal file */
+      for(auto i = 0; i < nlines_header_txt_file; ++i)
         {
           std::getline(ifs, buf);
           auto ind = buf.find("=");
           if(ind == 0)
             continue;
 
-          header_key_val[this->trim(this->replace(buf.substr(0, ind)))]
-            = this->trim(this->replace(buf.substr(ind + 1)));
+          auto key = trim(replace(buf.substr(0, ind)));
+          auto val = trim(replace(buf.substr(ind + 1)));
+          header_key_val[key] = val;
         }
     }
   else if(file_type_ == 1)
     {
+      /* wave format */
       ifs >> buf;
       ifs >> buf;
 
@@ -377,6 +441,277 @@ std::map<std::string, std::string> ESR::ParseHeader(std::ifstream& ifs)
       std::getline(ifs, buf);
       header_key_val["accumulation count"] = this->trim(buf.substr(buf.find("=") + 1));
     }
+  else if(file_type_ == 3)
+    {
+      // binary format.
+      const int bsize = 1024;
+      char buf[bsize];
+
+      // helper function
+      // fill up with null char.
+      auto clear = [](char buf[], int size)->void
+        {
+          std::memset(buf, '\x00', size);
+        };
+
+      // start reading:
+      // (sorry for ugly codes...)
+      clear(buf, bsize);
+      ifs.seekg(0x00);
+      ifs.read(buf, 0x10);
+      std::string data_head_type {buf}; //cAcqu
+      header_key_val["type"] = buf;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x40);
+      std::string file_name {buf};
+      header_key_val["file name"] = file_name;
+
+      clear(buf, bsize);
+      ifs.seekg(0x56);
+      ifs.read(buf, 4);
+      auto data_size = *reinterpret_cast<int*>(buf);
+      header_key_val["data length"] = std::to_string(data_size);
+      header_key_val["length"] = std::to_string(data_size);
+
+      ifs.seekg(0x60);
+      ifs.read(buf, 0x10);
+      std::string data_sort {buf};
+      header_key_val["data sort"] = data_sort;
+
+      ifs.seekg(0x70);
+      ifs.read(buf, 0x04);
+      auto x_range_min = *reinterpret_cast<float*>(buf);
+      ifs.read(buf, 0x04);
+      auto x_range = *reinterpret_cast<float*>(buf);
+
+      header_key_val["x-range min"] = std::to_string(x_range_min);
+      header_key_val["x-range"] = std::to_string(x_range);
+
+      clear(buf, bsize);
+      ifs.read(buf, 2);
+      std::string x_unit {buf};
+      header_key_val["x unit"] = x_unit;
+
+      ifs.seekg(0xb4);
+      ifs.read(buf, 4);
+      auto x_view_min = *reinterpret_cast<float*>(buf);
+      ifs.read(buf, 4);
+      auto x_view_max = *reinterpret_cast<float*>(buf);
+      ifs.read(buf, 4);
+      auto y_view_min = *reinterpret_cast<float*>(buf);
+      ifs.read(buf, 4);
+      auto y_view_max = *reinterpret_cast<float*>(buf);
+      header_key_val["x-view min"] = std::to_string(x_view_min);
+      header_key_val["x-view max"] = std::to_string(x_view_max);
+      header_key_val["y-view min"] = std::to_string(y_view_min);
+      header_key_val["y-view max"] = std::to_string(y_view_max);
+
+      /////  next
+      ifs.seekg(0x18ac);
+      ifs.read(buf, 4);
+      std::string type {buf}; // tyFA
+      header_key_val["type"] = "tyFA"; // oh.... duplicate...
+
+      ifs.seekg(0x18fc);
+      ifs.read(buf, 0x10);
+      std::string center_field {buf};
+      header_key_val["center field"] = center_field;
+
+      clear(buf, bsize);
+      ifs.seekg(0x190c);
+      ifs.read(buf, 0x10);
+      std::string sweep1 {buf};
+      header_key_val["sweep width(fine)"] = sweep1;
+
+      clear(buf, bsize);
+      ifs.seekg(0x191c);
+      ifs.read(buf, 0x10);
+      std::string sweep2 {buf};
+      header_key_val["sweep width(coar)"] = sweep2;
+
+      clear(buf, bsize);
+      ifs.seekg(0x194c);
+      ifs.read(buf, 4);
+      std::string sweep_time {buf};
+      header_key_val["sweep time"] = sweep_time;
+
+      clear(buf, bsize);
+      ifs.seekg(0x197c);
+      ifs.read(buf, 0x10);
+      std::string sweep_control {buf};
+      header_key_val["sweep control"] = sweep_control;
+
+      ////// frequency
+      clear(buf, bsize);
+      ifs.seekg(0x1a5c);
+      ifs.read(buf, 0x10);
+      std::string mod_frq {buf};
+      header_key_val["modulation freq."] = mod_frq;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string mod_width_fine {buf};
+      header_key_val["mod. width(fine)"] = mod_width_fine;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string mod_width_coarse {buf};
+      header_key_val["mod. width(coarse)"] = mod_width_coarse;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string phase {buf};
+      header_key_val["phase"] = phase;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string receiver_mode {buf};
+      header_key_val["receiver mode"] = receiver_mode;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string phase_fine {buf};
+      header_key_val["phase (fine)"] = phase_fine;
+
+      clear(buf, bsize);
+      ifs.seekg(0x1abc);
+      ifs.read(buf, 0x10);
+      std::string amplitude_fine {buf};
+      header_key_val["amplitude(fine)"] = amplitude_fine;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string amplitude_coarse {buf};
+      header_key_val["amplitude(coarse)"] = amplitude_coarse;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string time_constant {buf};
+      header_key_val["time constant"] = time_constant;
+
+      clear(buf, bsize);
+      ifs.read(buf, 16);
+      std::string zero {buf};
+      header_key_val["zero"] = zero;
+
+      clear(buf, bsize);
+      ifs.seekg(0x1afb);
+      ifs.read(buf, 0x10);
+      std::string receiver_mode1 {buf}; // rmsecond
+      header_key_val["receiver mode2"] = receiver_mode1;
+
+      clear(buf, bsize);
+      ifs.seekg(0x1b0c);
+      ifs.read(buf, 0x10);
+      std::string phase2_fine {buf};
+      header_key_val["phase2 (fine)"] = phase2_fine;
+
+      clear(buf, bsize);
+      ifs.seekg(0x1b1c);
+      ifs.read(buf, 0x10);
+      std::string amplitude2_fine {buf};
+      header_key_val["amplitude2(fine)"] = amplitude2_fine;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string amplitude2_coarse {buf};
+      header_key_val["amplitude2(coars)"] = amplitude2_coarse;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string time_constant2 {buf};
+      header_key_val["time constant2"] = time_constant2;
+
+      // microwave
+      clear(buf, bsize);
+      ifs.seekg(0x1bec);
+      ifs.read(buf, 0x08);
+      std::string shf {buf};
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string mw_frq {buf};
+      header_key_val["micro frequency"] = mw_frq;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x08);
+      std::string mw_frq_unit {buf};
+      header_key_val["micro freq. unit"] = mw_frq_unit;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string mw_power {buf};
+      header_key_val["micro power"] = mw_power;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x08);
+      std::string mw_power_unit {buf};
+      header_key_val["micro power unit"] = mw_power_unit;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string mw_phase {buf};
+      header_key_val["micro phase"] = mw_phase;
+
+      clear(buf, bsize);
+      ifs.seekg(0x1cb4);
+      ifs.read(buf, 0x08);
+      std::string gu {buf};
+      header_key_val["micro gunp"] = gu;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x08);
+      std::string re {buf};
+      header_key_val["micro ref"] = re;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x08);
+      std::string db30 {buf};
+      header_key_val["micro 30db"] = db30;
+
+      /// acq param
+      clear(buf, bsize);
+      ifs.seekg(0x1eac);
+      ifs.read(buf, 0x10);
+      std::string vt {buf};
+      header_key_val["vt type"] = vt;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x10);
+      std::string tt {&buf[0] + 2}; // skip the first two char
+      header_key_val["temperature"] = tt;
+
+      clear(buf, bsize);
+      ifs.seekg(0x1efc);
+      ifs.read(buf, 0x04);
+      std::string tu {&buf[0] + 2}; // tempr. unit
+      header_key_val["temperature unit"] = tu;
+
+      clear(buf, bsize);
+      ifs.seekg(0x205c);
+      ifs.read(buf, 0x10);
+      std::string date {buf};
+      header_key_val["date"] = date;
+
+      clear(buf, bsize);
+      ifs.seekg(0x20b8);
+      ifs.read(buf, 0x08);
+      std::string acc_mode {buf};
+      header_key_val["accumulation mode"] = acc_mode;
+
+      clear(buf, bsize);
+      ifs.seekg(0x20c0);
+      ifs.read(buf, 0x08);
+      std::string base_line {buf};
+      header_key_val["baseline"] = base_line;
+
+      clear(buf, bsize);
+      ifs.read(buf, 0x08);
+      std::string sampling_mode {buf};
+      header_key_val["sampling mode"] = sampling_mode;
+
+    }
   else
     {
       // never happen.
@@ -385,19 +720,21 @@ std::map<std::string, std::string> ESR::ParseHeader(std::ifstream& ifs)
   return std::move(header_key_val);
 }
 
+/**
+   make header instance by parsed key data.
+ */
 void ESR::MakeHeader(const std::map<std::string, std::string>& key_val)
 {
   esr_header_ = std::make_shared<ESRHeader>(key_val);
 }
 
+/**
+   parse data
+
+   read as double. Original data in a file is float.
+ */
 void ESR::ParseData(std::ifstream& ifs)
 {
-  if(file_type_ < 0 or file_type_ > 1)
-    {
-      Fatal("", "FUCK. you specify 0 or 1 for normal file or wave format file");
-      throw std::runtime_error("fuck fuck fuck");
-    }
-
   if(file_type_ == 0)
     {
       // normal
@@ -417,7 +754,23 @@ void ESR::ParseData(std::ifstream& ifs)
       for(auto index = 0; index < data_length_; ++index)
         {
           std::getline(ifs, buf);
-          val = std::stod(buf);
+          val = std::stod(buf); // slightly danger..
+          try
+            {
+              val = std::stod(buf);
+            }
+          catch(std::invalid_argument& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
+          catch(std::out_of_range& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
 
           vydata_orig_.push_back(val);
           vydata_norm_orig_.push_back(val / gain_);
@@ -438,13 +791,28 @@ void ESR::ParseData(std::ifstream& ifs)
       for(auto index = 0; index < data_length_; ++index)
         {
           std::getline(ifs, buf);
-          val = std::stod(buf);
+          try
+            {
+              val = std::stod(buf);
+            }
+          catch(std::invalid_argument& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
+          catch(std::out_of_range& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
 
           vydata_imag_orig_.push_back(val);
           vydata_imag_norm_orig_.push_back(val / gain_);
         }
     }
-  else
+  else if(file_type_ == 1)
     {
       // wave format
       std::string buf;
@@ -456,15 +824,49 @@ void ESR::ParseData(std::ifstream& ifs)
       vydata_orig_.reserve(data_length_);
       vydata_norm_orig_.reserve(data_length_);
 
-      auto val = double{0};
+      auto val = 0.0;
       for(auto il = 0; il < data_length_; ++il)
         {
+          // read x
           ifs >> buf;
           val = std::stod(buf);
+          try
+            {
+              val = std::stod(buf);
+            }
+          catch(std::invalid_argument& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
+          catch(std::out_of_range& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
           vxdata_orig_.push_back(val);
 
+          // read y
           ifs >> buf;
           val = std::stod(buf);
+          try
+            {
+              val = std::stod(buf);
+            }
+          catch(std::invalid_argument& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
+          catch(std::out_of_range& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
           vydata_orig_.push_back(val);
           vydata_norm_orig_.push_back(val / gain_);
         }
@@ -480,9 +882,25 @@ void ESR::ParseData(std::ifstream& ifs)
       std::getline(ifs, buf); // mT            Intensity
       for(auto il = 0; il < data_length_; ++il) /// il: index line
         {
+          ifs >> buf; // dump. same as x in real part.
           ifs >> buf;
-          ifs >> buf;
-          val = std::stod(buf);
+          try
+            {
+              val = std::stod(buf);
+            }
+          catch(std::invalid_argument& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
+          catch(std::out_of_range& e)
+            {
+              std::cerr << "On l. " << __LINE__ << " in " << __FILE__ << ": "
+                        << "fail to convert \"" << buf << "\"" << std::endl;
+              throw e;
+            }
+
           vydata_imag_orig_.push_back(val);
           vydata_imag_norm_orig_.push_back(val / gain_);
         }
@@ -497,28 +915,77 @@ void ESR::ParseData(std::ifstream& ifs)
           SetParams();
         }
     }
+  else if(file_type_ == 2)
+    {
+      ; // do nothing
+    }
+  else if(file_type_ == 3)
+    {
+      // binary file
+
+      /* this maybe calculated by the following:
+       positon = file_size - 4 * data_length * n_of_channel
+       n_of_channel is normally 2: real and imaginary part.
+
+       But may be this point is fixed, IMHO.
+      */
+      ifs.seekg(0x251c);
+
+      // reserve
+      vydata_norm_.reserve(data_length_);
+      vxdata_orig_.reserve(data_length_);
+      vydata_orig_.reserve(data_length_);
+      vydata_norm_orig_.reserve(data_length_);
+
+      // buffer
+      char buf[4]; // small..? danger?
+
+      /*
+        fortunately endian is small: no byte swap needed.
+       */
+
+      // real part
+      double val = 0;
+      double dx = (xrange_.second - xrange_.first) / static_cast<double>(data_length_);
+      for(auto index = 0; index < data_length_; ++index)
+        {
+          ifs.read(buf, 4);
+          val = static_cast<double>(*reinterpret_cast<float*>(buf));
+
+          vydata_orig_.push_back(val);
+          vydata_norm_orig_.push_back(val / gain_);
+          vxdata_orig_.push_back(xrange_.first + index * dx);
+        }
+
+      // reserve
+      vydata_imag_.reserve(data_length_);
+      vydata_imag_norm_.reserve(data_length_);
+      vydata_imag_orig_.reserve(data_length_);
+      vydata_imag_norm_orig_.reserve(data_length_);
+
+      for(auto index = 0; index < data_length_; ++index)
+        {
+          ifs.read(buf, 4);
+          val = static_cast<double>(*reinterpret_cast<float*>(buf));  // ugly
+
+          vydata_imag_orig_.push_back(val);
+          vydata_imag_norm_orig_.push_back(val / gain_);
+        }
+    }
+  else
+    {
+      // never happen
+    }
 }
 
+/**
+   Load data from ROOT file.
+ */
 void ESR::LoadFromROOTFile()
 {
-
-  auto deleter = [](TTree* p) -> void
-    {
-      // std::cout << "custom deleter called for " << p->GetName() << std::endl;
-      // std::cout << "on heap? " << std::boolalpha << p->IsOnHeap() << std::endl;
-      if(p->IsOnHeap())
-        delete p;
-      // delete p;
-      // p = nullptr;
-      // std::cout << "EO custom deleter" << std::endl;
-    };
-
   auto tf = std::unique_ptr<TFile>(TFile::Open(file_path_.c_str()));
-  auto tree_header = std::unique_ptr<TTree, void(*)(TTree*)>(dynamic_cast<TTree*>(tf->Get("header")), deleter);
-  auto tree_data = std::unique_ptr<TTree, void(*)(TTree*)>(dynamic_cast<TTree*>(tf->Get("data")), deleter);
-  // auto* tf = TFile::Open(file_path_.c_str());
-  // auto* tree_header = dynamic_cast<TTree*>(tf->Get("header"));
-  // auto* tree_data = dynamic_cast<TTree*>(tf->Get("data"));
+  auto tree_header = dynamic_cast<TTree*>(tf->Get("header"));
+  auto tree_data = dynamic_cast<TTree*>(tf->Get("data"));
 
   if(not (tree_header and tree_data))
     {
@@ -567,6 +1034,10 @@ void ESR::LoadFromROOTFile()
   tf->Close();
 }
 
+
+/**
+   Reading from internal header file, setting parameters.
+ */
 void ESR::SetParams()
 {
   data_length_ = esr_header_->GetDataLength();
@@ -579,6 +1050,15 @@ void ESR::SetParams()
   gain_ = amp1s.first * std::pow(10, amp1s.second);
 }
 
+
+/**
+   reduce data points.
+
+   Original data is kept and unchanged by this operation.
+   Calculating a mean value of all data points of which the number is reduction factor,
+   make new vectors.
+   （reduction factorで指定したデータ点の平均値をとり，vectorを作成し直す．）
+ */
 void ESR::ReduceData()
 {
   // reduction
@@ -636,6 +1116,11 @@ void ESR::ReduceData()
   vydata_imag_norm_ = std::move(vydata_imag_norm_red_);
 }
 
+/**
+   integrating data, which is reduced.
+
+   Internally, this calls DoIntegral function.
+ */
 void ESR::IntegrateData()
 {
   vydata_integ_ = std::move(DoIntegral(vxdata_, vydata_,
@@ -648,6 +1133,16 @@ void ESR::IntegrateData()
                                                  xrange_.first, xrange_.second).second);
 }
 
+/**
+   make all graphs by calling MakeGraph function.
+
+   * raw signal
+   * raw signal normalised by "normalise factor"
+   * integrated raw signal
+   * integrated raw signal normalised
+
+   Graphs for imaginary part are also created.
+ */
 void ESR::MakeAllGraphs()
 {
   // graphs
@@ -673,6 +1168,9 @@ void ESR::MakeAllGraphs()
   MakeupGraph(graph_imag_norm_integ_, gs_sig_imag_integ, "");
 }
 
+/**
+   check reduction factor and correct if necessary.
+ */
 void ESR::CheckReductionFactor()
 {
   if(data_length_ <= 0)
@@ -697,6 +1195,9 @@ void ESR::CheckReductionFactor()
     }
 }
 
+/**
+   check whether file exists or not
+ */
 bool ESR::CheckInputFile(std::ifstream& ifs)
 {
   if(ifs.fail())
@@ -707,26 +1208,20 @@ bool ESR::CheckInputFile(std::ifstream& ifs)
   return true;
 }
 
+/**
+   check file format. File type info is stored in the variable file_type_.
+
+   -1: other file
+    0: converted text file (80 lines header and data part)
+    1: 'wave format' file (approx. 5 lines header and two columns data part)
+    2: ROOT file created by ESR::Write() function.
+    3: raw binary file
+
+    Though raw binary file is accepted, some header infomation is missing.
+    (Need more binary analysis... but it is not mandatory.)
+ */
 void ESR::CheckFileFormatType(std::ifstream& ifs)
 {
-  /*
-    ## GOOD file
-    $ cat data.txt
-    ===== Data Head ===================================
-    file name .....
-
-    ## waveformat file
-    $ cat data.txt
-    waves=1 length=65252 data=CH1/2
-    .....
-
-    ## file type
-   -1 : other file
-    0 : normal file
-    1 : wave format file
-    2 : ROOT file
-   */
-
   ifs.seekg(ifs.beg);
   std::string buf;
   std::getline(ifs, buf);
@@ -745,9 +1240,9 @@ void ESR::CheckFileFormatType(std::ifstream& ifs)
 
   // check whether ROOT file.
   ifs.seekg(ifs.beg);
-  char cbuf[4];
+  char cbuf[128];
   ifs.read(cbuf, 4); // root
-  auto header_id = std::string(cbuf, 4);
+  auto header_id = std::string{cbuf, 4};
   ifs.read(cbuf, 4); // version info stored as int with bigendian.
 
   auto char2int_be = [](const char* s) -> int
@@ -760,24 +1255,40 @@ void ESR::CheckFileFormatType(std::ifstream& ifs)
     };
   int root_version = char2int_be(cbuf);
 
+  // ROOT file created by older ROOT version is rejected.
+  // (Maybe never happen, because this ESR class does not work older than ROOTv5
+  //  and is intended to be compiled and used under ROOTv6)
   if(header_id == "root" and (root_version > 50000))
     {
       Info("ESR::CheckFileFormatType", "root file");
       file_type_ = 2;
       return;
     }
-  else
+
+  // check binary file
+  ifs.seekg(ifs.beg);
+  ifs.read(cbuf, 0x10);
+  header_id = std::string{cbuf};
+  if(header_id.size() != 0)
     {
-      Warning("CheckFileFormatType", "Strange file format");
-      file_type_ = -1;
+      Info("CheckFileFormatType", "binary file");
+      file_type_ = 3;
       return;
     }
 
-  // never happen
+  Warning("CheckFileFormatType", "Strange file format");
+  file_type_ = -1;
   return;
 }
 
+/**
+   integrate data in specified range.
 
+   User cannot call this; private function.
+   This is called by functions related to signal integral.
+
+   @param integral_constant treat the second component as integral constant if the first component is true
+ */
 std::pair<std::vector<double>, std::vector<double> > // <- fuckin writing. '>>' is acceptable at c++11 !!!
 ESR::DoIntegral(const std::vector<double>& xs, const std::vector<double>& ys,
                 double start, double end, const std::pair<bool, double> integral_constant) const
@@ -841,6 +1352,12 @@ ESR::DoIntegral(const std::vector<double>& xs, const std::vector<double>& ys,
   return std::make_pair(std::move(xs_new), std::move(ys_integ));
 }
 
+
+/**
+   create a graph integrated partially.
+
+   @return shared_ptr of TGraph
+ */
 std::shared_ptr<TGraph> ESR::GetGraphIntegPart(double start, double end,
                                                const std::pair<bool, double> integral_constant,
                                                bool is_norm, bool is_imag) const
@@ -855,12 +1372,23 @@ std::shared_ptr<TGraph> ESR::GetGraphIntegPart(double start, double end,
   return std::shared_ptr<TGraph>(MakeGraph(vxy.first, vxy.second));
 }
 
+
+/**
+   make graph from vector.
+
+   @return raw TGraph pointer. should be treated by smart pointers.
+ */
 TGraph* ESR::MakeGraph(const std::vector<double>& x,
-                              const std::vector<double>& y) const
+                       const std::vector<double>& y) const
 {
   return new TGraph(x.size(), x.data(), y.data());
 }
 
+/**
+   make up graph.
+
+   Only basic cosmetic is done: title, name, axis, and line and marker configs.
+ */
 void ESR::MakeupGraph(const std::shared_ptr<TGraph>& gr,
                       const GraphStyle& gs, const std::string title) const
 {
@@ -879,6 +1407,10 @@ void ESR::MakeupGraph(const std::shared_ptr<TGraph>& gr,
 }
 
 
+/**
+   Set new reduction factor.
+   Data and graphs are updated.
+ */
 void ESR::SetReductionFactor(int reduction_factor)
 {
   reduction_factor_ = reduction_factor;
@@ -890,10 +1422,15 @@ void ESR::SetReductionFactor(int reduction_factor)
   MakeAllGraphs();
 }
 
+/**
+   calculate integrated value.
+
+
+ */
 double ESR::Integrate(double start, double end, bool is_norm, bool is_imag,
                       const std::pair<bool, double> integral_constant) const
 {
-  const std::vector<double>* pvy;
+  const std::vector<double>* pvy; // Pointer of Vector Y
   if(is_imag)
     pvy = is_norm? &vydata_imag_norm_ : &vydata_imag_;
   else
@@ -904,12 +1441,22 @@ double ESR::Integrate(double start, double end, bool is_norm, bool is_imag,
 }
 
 
-
 /*
-  getter
+  getters
+ */
+/**
+   return file type.
+   - 0: text file
+   - 1: wave format file
+   - 2: ROOT file
+   - 3: raw binary file
+   - -1: other type
  */
 int ESR::GetFileType() const {return file_type_;};
 
+/**
+   shared pointer of ESRHeader is returned.
+ */
 std::shared_ptr<ESRHeader> ESR::GetHeader() const {return esr_header_;}
 
 std::pair<double, double> ESR::GetXrange() const {return esr_header_->GetXrange();}
@@ -920,12 +1467,24 @@ double ESR::GetXmin() const {return xrange_.first;}
 
 double ESR::GetXmax() const {return xrange_.second;}
 
+/**
+   return the path of input file
+ */
 std::string ESR::GetFilePath() const {return file_path_;};
 
+/**
+   return data length a.k.a. the size of vector
+ */
 int ESR::GetDataLength() const {return data_length_;};
 
+/**
+   return date string
+ */
 std::string ESR::GetDate() const {return date_;};
 
+/**
+   return date as Unix time.
+ */
 time_t ESR::GetDateAsUT() const
 {
   tm tm_date;
@@ -935,14 +1494,29 @@ time_t ESR::GetDateAsUT() const
     {
       Warning("GetDateAsUT()", "Fail to parse \"%s\" as \"%s\"",
               date_.c_str(), date_format.c_str());
-      return 0ul;
+      return static_cast<time_t>(0);
     }
   else
     return mktime(&tm_date);
 }
 
+/**
+   return gain a.k.a. normalisation factor
+ */
 double ESR::GetGain() const {return gain_;};
 
+/**
+   return shared pointer of graph
+   Four kinds of graphs returned:
+   is_norm | is_imag | returned graph
+   -----|-----|-----
+   0 | 0 | raw signal
+   1 | 0 | normalised raw signal
+   0 | 1 | imaginary part of raw signal
+   1 | 1 | normalised imaginary part of raw signal
+
+   0, 1: false, true, respectively.
+ */
 std::shared_ptr<TGraph> ESR::GetGraph(bool is_norm, bool is_imag) const
 {
   // Here, internal counter of shared_ptr is incremented !
@@ -952,6 +1526,13 @@ std::shared_ptr<TGraph> ESR::GetGraph(bool is_norm, bool is_imag) const
     return is_norm? graph_norm_ : graph_;
 };
 
+/**
+   return shared pointer of graph.
+   Similar to GetGraph function, graph pointer is specified by input parameters.
+
+   @param is_norm normalised or not
+   @param is_imag imaginary part or not
+ */
 std::shared_ptr<TGraph> ESR::GetGraphInteg(bool is_norm, bool is_imag) const
 {
   if(is_imag)
@@ -960,8 +1541,14 @@ std::shared_ptr<TGraph> ESR::GetGraphInteg(bool is_norm, bool is_imag) const
     return is_norm? graph_norm_integ_ : graph_integ_;
 }
 
+/**
+   return a copy of vector x.
+ */
 std::vector<double> ESR::GetX() const {return vxdata_;};
 
+/**
+   return a copy of vector y. By changing inputs, four kinds of data returned.
+ */
 std::vector<double> ESR::GetY(bool is_norm, bool is_imag) const
 {
   if(is_imag)
@@ -970,9 +1557,8 @@ std::vector<double> ESR::GetY(bool is_norm, bool is_imag) const
     return is_norm? vydata_norm_integ_ : vydata_integ_;
 };
 
-
-/*
-  print function
+/**
+   print x and y range.
  */
 void ESR::PrintRange() const
 {
@@ -983,6 +1569,11 @@ void ESR::PrintRange() const
             << "\t(width: " << yrange_.second - yrange_.first << ")" << std::endl;
 }
 
+/**
+   print some infomation.
+
+   Inherits from TObject.
+ */
 void ESR::Print(Option_t*) const
 {
   std::cout << "file path: " << file_path_ << std::endl
@@ -994,10 +1585,15 @@ void ESR::Print(Option_t*) const
 }
 
 
-/*
+/**
   write data into root file.
+  Two TTrees are created: info and data.
+  In the former, the raw header info are stored as pair<string, string>.
+  In the letter, x, Re(y), Im(y), Re(normalised y), and Im(normalised y) are stored as double.
+
+  For consistency of this file, the type of 'name' should be std::string.
+  However, exceptionally const char* is used in order to keep consistency b/w TObject::Write.
 */
-// void ESR::Write(const std::string output) const
 Int_t ESR::Write(const char* name, Int_t, Int_t) const
 {
   auto f = std::shared_ptr<TFile>(TFile::Open(name, "recreate"));
@@ -1005,9 +1601,10 @@ Int_t ESR::Write(const char* name, Int_t, Int_t) const
   auto tree_data = new TTree("data", "data");
   // `- do not use smart pointer for TTree...
   //    It is binded by TFile, which call dtor of all objects on the TFile directory when Close method is called.
-  //    ONLY USE SMART POINTER FOR TFile.
+  //    USE SMART POINTER FOR ONLY TFile.
 
   // header
+  /* Accessing with pyROOT is no problem.*/
   std::pair<std::string, std::string> row;
   tree_header->Branch("info", &row);
   for(auto& pr : raw_header_)
