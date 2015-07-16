@@ -6,21 +6,10 @@
 
 using namespace std;
 
-DipoleKernel::DipoleKernel() : lines_( 0 ) {
+DipoleKernel::DipoleKernel() : core_(), lines_( 0 ) {
 }
 
 DipoleKernel::~DipoleKernel() {
-}
-
-double DipoleKernel::finv( const double& x ){
-  // x must be -1 < x < 2
-  if( x < -1.0 || x > 2.0 ) return 0.0;
-  double v = x + 1.0;
-  return ( v > 0.0 ? 1.0 / sqrt( v/3.0 ) : 0.0 );
-}
-
-double DipoleKernel::ftilde( const double& x ){
-  return finv( x ) + finv( - x );
 }
 
 /*!
@@ -32,23 +21,31 @@ double DipoleKernel::localField( const double& r ){
   return r != 0.0 ? -1.395 * pow( r, -3.0 ) : 0.0 ; 
 }
 
+double DipoleKernel::weight( const double& r ){
+  const double c = M_PI / 4.185;
+  return c * pow( r, 5.0 );
+}
+
 // actual definition of the kernel functional form.
 // r in nm
 // t() in mT
 double DipoleKernel::eval( const double& r ){
   if( ! ( r > 0.0 ) ) return 0.0;
-  double lf = this->localField( r );
-  double C = M_PI * pow( r, 2.0 ) / 3.0 / fabs( lf );
+  return this->weight( r ) * this->core( r, this->t() );
+}
+
+double DipoleKernel::core( const double& r, const double& t ){
+  if( lines_.size() == 0 ) return core_( r, t );
   double fv = 0.0;
   for( int i = 0; i < lines_.size(); i++ ){
-    fv += this->ftilde( ( this->t() - lines_[ i ] ) / lf );
+    fv += core_( r, t - lines_[ i ] );
   }
-  return C * fv;
+  return fv;
 }
 
 string DipoleKernel::text(){
   ostringstream ost;
-  ost << "K(r,t) = #frac{1}{6|A(r)|}#left(#frac{((t-H_{i})/A(r))+1}{3}#right)^{-#frac{1}{2}}";
+  ost << "#tilde{K}(r,t)=#sum_{i}#left(#frac{1#pm((t-H_{i})/A(r))}{3}#right)^{-#frac{1}{2}}";
   ost << " where H_{i} =";
   if( lines_.size() == 0 ){
     ost << "0";
@@ -74,3 +71,5 @@ double DipoleKernel::offset(){
   for( int i = 0; i < lines_.size(); i++ ) v += lines_[ i ];
   return v / lines_.size();
 }
+
+ClassImp( DipoleKernel );

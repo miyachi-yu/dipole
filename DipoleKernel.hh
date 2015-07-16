@@ -1,9 +1,13 @@
 #ifndef _DipoleKernel_hh_
 #define _DipoleKernel_hh_
 
+#include <TObject.h>
 #include <Tranform/RTransform.hh>
 #include <string>
 #include <vector>
+
+#include "KernelCore.hh"
+
 /*
   Definition of the tarnsformation kernel: K(x,t)
   
@@ -23,18 +27,12 @@ https://drive.google.com/a/quark.kj.yamagata-u.ac.jp/file/d/0BwXqnrBuS6yDVHJqV3Z
   t: in mT
 
 */
-class DipoleKernel : public Transform::RTransform::Kernel {
+class DipoleKernel : public Transform::RTransform::Kernel, public TObject {
 public:
 
   DipoleKernel();            // default constructor
 
   virtual ~DipoleKernel();   // destructor
-  
-  //  f(x) = pow( (x+1)/3, -0.5 )
-  double finv( const double& x );
-
-  // f(x) + f(-x)
-  double ftilde( const double& x );
   
   /*!
     Unit of the given r is nm and unit of return value is mT.
@@ -48,15 +46,21 @@ public:
   // t() in mT
   virtual double eval( const double& r );
 
+  // \pi r^2 / 3 / A(r)
+  double weight( const double& r );
+  
   std::string text();
   
   void offset( const double& v );
   double offset(); // return mean of offset
   
+  double core( const double& r, const double& t );
+  
 private:
+  KernelCore core_;
   std::vector< double > lines_;        // ESR lines
   
-  
+  ClassDef( DipoleKernel, 1.0 );
 };
 
 #endif // _DipoleKernel_hh_

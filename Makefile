@@ -7,12 +7,12 @@
 #   copy the entire user_program directory and rename.
 
 TARGET = user_program
-OBJS   = ESRData.o Rho.o MyKernel.o  DipoleKernel.o
+OBJS   = ESRData.o Rho.o MyKernel.o
 
 ## ----------------------------------------------------------------------- #
 ##                   ROOT Object Dictionary Management                     #
 ## ----------------------------------------------------------------------- #
-ROOTOBJS    = LineShape.o AGaus.o MyApplication.o ESR.o ESRHeader.o ESRHeaderElement.o
+ROOTOBJS    = LineShape.o DipoleKernel.o KernelCore.o AGaus.o MyApplication.o ESR.o ESRHeader.o ESRHeaderElement.o
 ROOTOBJ_HH  = $(patsubst %.o, %.hh, $(ROOTOBJS))
 ROOTLINKDEF = RootLinkDef.hh
 ROOTDICT_CC = RootObjDict.cc

@@ -7,6 +7,8 @@
 #pragma link C++ nestedclasses;
 
 #pragma link C++ class MyApplication+;
+#pragma link C++ class KernelCore+;
+#pragma link C++ class DipoleKernel+;
 #pragma link C++ class AGaus+;
 #pragma link C++ class LineShape+;
 
