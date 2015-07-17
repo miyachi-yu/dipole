@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------
-   file:         sample3.cc
+   file:         sample7.cc
    description: 
    Example for ESR data fitting. The parameters of asymmetric gausian 
    will be determined by fitting the ESR data.
@@ -18,11 +18,11 @@ int sample7(){
   app->nLeg( 7, 8 );
 
   app->toffset( 328.87 );
-  //  app->amplitude( 80.2102 );
-  app->amplitude( 50 );
-  app->mean( 1.00307 );
-  app->sigma( 0.0161825 );
-  app->asym( 24.2989 );
+  app->amplitude( 78.5951 );
+  app->mean(       1.001428 );
+  app->sigma(      0.0123217 );
+  app->asym(      31.4322 );
+
   app->draw( &esr );
   
   gPad->Update();
