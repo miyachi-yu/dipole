@@ -42,6 +42,8 @@ MyApplication::MyApplication( int argc, char* argv[] ) :
 {
   Utility::Arguments& args = Utility::Arguments::ref();
 
+  this->SetPrompt( "ESR [%d] " ); // modify prompt
+  
   cout << "// --------------------------------------------------------- // " << endl;
   cout << "   You can obtain my instance via" << endl;
   cout << "   MyApplication *app = MyApplication::instance();" << endl;
