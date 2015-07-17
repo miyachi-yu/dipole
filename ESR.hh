@@ -58,6 +58,7 @@ class ESR : public TObject
 {
   static int nlines_header_txt_file;
 
+protected:
   int file_type_;
   std::shared_ptr<ESRHeader> esr_header_;
 
