@@ -14,3 +14,5 @@ user_program は単に ROOT の CInt を起動するものです。
 
 2-a  マクロサンプル
 macro/sample*.cc としていくつかマクロを用意しておきました。
+
+3) ブランチの有効利用
