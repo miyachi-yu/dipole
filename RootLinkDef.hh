@@ -14,6 +14,7 @@
 #pragma link C++ class MixedDensity+;
 #pragma link C++ class LineShape+;
 
+#pragma link C++ class ESRLine+;
 #pragma link C++ class ESR+;
 #pragma link C++ class ESRHeader+;
 #pragma link C++ class ESRHeaderElement+;

@@ -1,6 +1,16 @@
 #ifndef _MyApplication_hh_
 #define _MyApplication_hh_
+/*
+  Main Application Class for ESR analysis
 
+  In the main program, user_program.cc, this class object will be
+  created. After issuing MyApplication::Run() methods, program enters
+  interactive mode controlled with the CInt interface.
+
+  Through the CInt interface, one can access directly the MyApplication
+  instance, calling (MyApplication*) MyApplication::instance() method.
+
+ */
 #include <TRint.h>
 #include <vector>
 
@@ -20,20 +30,36 @@ namespace Transform {
   class RealFunction;
 }
 
+/*
+  Definition of MyApplication class
+ */
 class MyApplication : public TRint {
 public:
 
-  MyApplication( int argc, char* argv[] );
-  virtual ~MyApplication();
-  
-  static MyApplication* instance() { return singleton_; }
+  MyApplication( int argc, char* argv[] );  // constructor
+  virtual ~MyApplication();                 // destractor
 
-  void draw();
+  // get a MyApplication pointer
+  static MyApplication* instance() { return singleton_; }
+  
+  // draw two panel graph: density distribution at top,
+  // intensity distribution at bottom
+  void draw(); 
+
+  // draw the two panel graph
+  // with the given ESR raw data on the intensity disribution.
   void draw( ESR* esr );
+
+  // draw the density distribution only
   void drawRho();
 
+  // draw the intensity distribution only
   void drawI();
+
+  // draw the intensity distribution with the given ESR data
   void drawI( ESR* esr );
+
+  // draw the intensity distribution in the given range
   void drawI( const double& tmin, const double& tmax );
 
   

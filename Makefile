@@ -12,7 +12,7 @@ OBJS   = ESRData.o Rho.o MyKernel.o
 ## ----------------------------------------------------------------------- #
 ##                   ROOT Object Dictionary Management                     #
 ## ----------------------------------------------------------------------- #
-ROOTOBJS    = Fitter.o LineShape.o DipoleKernel.o KernelCore.o MixedDensity.o AGaus.o MyApplication.o ESR.o ESRHeader.o ESRHeaderElement.o
+ROOTOBJS    = Fitter.o LineShape.o DipoleKernel.o KernelCore.o MixedDensity.o AGaus.o MyApplication.o ESRLine.o ESR.o ESRHeader.o ESRHeaderElement.o
 ROOTOBJ_HH  = $(patsubst %.o, %.hh, $(ROOTOBJS))
 ROOTLINKDEF = RootLinkDef.hh
 ROOTDICT_CC = RootObjDict.cc

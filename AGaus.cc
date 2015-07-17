@@ -25,11 +25,11 @@ string AGaus::text(){
 }
 
 double AGaus::upper() {
-  return mean + 2.0 * asym * sigma;
+  return mean + 4.0 * asym * sigma;
 }
 
 double AGaus::lower() {
-  double v = mean - 2.0 * sigma;
+  double v = mean - 4.0 * sigma;
   return ( v > 0.0 ? v : 0.0 );
 }
 

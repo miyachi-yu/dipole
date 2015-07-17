@@ -19,7 +19,8 @@ public:
 private:
   MyApplication *app_;
   TGraph *g_;
-  
+  double tmin_;
+  double tmax_;
   
   ClassDef( Fitter, 1.0 );
 };

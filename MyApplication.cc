@@ -341,16 +341,16 @@ double MyApplication::asym(){
 
 void MyApplication::update(){
   
-  rT_->upper( rho_->mean + 4.0 * rho_->sigma * rho_->asym );
-  rT_->lower( rho_->mean - 4.0 * rho_->sigma );
+  rT_->upper( rho_->upper() );
+  rT_->lower( rho_->lower() );
   if( rT_->lower() < 0.0 ) rT_->lower( 0.0 );
   
   double trange = 1.5 * fabs( this->hDupper() - k_->offset() );
   tRange_[ 0 ] = -trange;
   tRange_[ 1 ] =  trange;
-
+  
   tstep_ = ( tRange_[ 1 ] - tRange_[ 0 ] ) / nT_;
-
+  
 }
 
 void MyApplication::draw(){
