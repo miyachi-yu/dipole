@@ -11,7 +11,7 @@ int sample2(){
 
   MyApplication *app = MyApplication::instance();
   
-  ESR esr( "cofeebean-a.txt" ); // prepare ESR data from the given file
+  ESR *esr = new ESR( "cofeebean-a.txt" ); // prepare ESR data from the given file
 
   app->amplitude( 150.0 );
   app->mean( 0.65 );
@@ -20,7 +20,7 @@ int sample2(){
 
   // draw the density and intensity distributions.
   // The given esr data will be super imposed on the intensity distribution
-  app->draw( &esr );
+  app->draw( esr );
 
   return 0;
 }

@@ -18,17 +18,21 @@ int sample7(){
   app->nLeg( 7, 8 );
 
   app->toffset( 328.87 );
-  app->amplitude( 78.5951 );
-  app->mean(       1.001428 );
-  app->sigma(      0.0123217 );
-  app->asym(      31.4322 );
-
+  app->amplitude( 79.6631 );
+  app->mean( 1.01279 );
+  
+  AGaus *ag = dynamic_cast< AGaus* >( app->density() );
+  if( ag ){
+    ag->asigma( true,  0.3873 );
+    ag->asigma( false, 0.0123217 );
+    app->update();
+  }
   app->draw( &esr );
   
   gPad->Update();
   
   //  double sig[2] = { 326.9, 330.9 };
-  double sig[2] = { 327.5, 330.3 };
+  double sig[2] = { 327.0, 331.0 };
   
   //
   //  Data preparation
@@ -79,8 +83,11 @@ int sample7(){
   gPad->Update();
   
   Fitter fitter;
+  //  fitter.FixParameter( 0 );
+  //  fitter.FixParameter( 1 );
+  fitter.FixParameter( 2 );
+  //  fitter.FixParameter( 3 );
   fitter.fit( gSig );
-  
   
   app->draw();
   gSig->Draw( "SAMEp" );

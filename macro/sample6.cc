@@ -76,7 +76,7 @@ int sample6(){
   c->Update();
   
   int nT = gSig->GetN();
-  AGaus& aG = *(app->rho());
+  AGaus& aG = *(app->density());
   
   // data preparation:
   // rho(r)

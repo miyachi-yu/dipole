@@ -25,11 +25,14 @@ int sample8(){
   app->toffset( 322.843 );  // esr.find( 322.75, 322.95 )
 
   // configure density distribution
-  app->amplitude( 37.9382 );
-  app->mean(       0.852397 );
-  app->sigma(      0.0494269 );
-  app->asym(      11.8173 );
-
+  app->amplitude( 34.4723 );
+  app->mean( 0.947862 );
+  AGaus *ag = dynamic_cast< AGaus* >( app->density() );
+  if( ag ){
+    ag->asigma( true,  0.5469354 );
+    ag->asigma( false, 0.0497214 );
+    app->update();
+  }
   
   TCanvas *c = new TCanvas( "c1", "ESR", 794, 1123 );
   c->Divide( 1, 3 );
@@ -42,6 +45,13 @@ int sample8(){
   c->cd( 2 );
   app->drawI( &esr );
 
+  double fitR[2] = { 318.5, 324.0 };
+  TLine *line = new TLine;
+  line->SetLineWidth( 2 );
+  line->SetLineColor( kMagenta );
+  line->DrawLine( fitR[ 0 ], 0, fitR[ 0 ], 500 );
+  line->DrawLine( fitR[ 1 ], 0, fitR[ 1 ], 500 );
+  
   c->Update();
 
   //
@@ -50,7 +60,11 @@ int sample8(){
   TGraph* g = (TGraph*) esr.GetGraphInteg()->Clone();
 
   Fitter fitter;
-  fitter.fit( g, 318.0, 325.0 );
+  //  fitter.FixParameter( 0 );
+  //  fitter.FixParameter( 1 );
+  //  fitter.FixParameter( 2 );
+  //  fitter.FixParameter( 3 );
+  fitter.fit( g, fitR[ 0 ], fitR[ 1 ] );
 
   c->cd( 2 );
   app->drawI( 314.0, 329.0 );

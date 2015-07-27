@@ -9,7 +9,7 @@ int sample5(){
   MyApplication *app = MyApplication::instance();
 
   // ESR spectrum of TEMPO doped material
-  ESR esr( "cal2_1.txt", 64 ); // prepare ESR data from the given file
+  ESR esr( "cal2_1.txt", 128 ); // prepare ESR data from the given file
 
   // Tunning of numerical integration parameteres.
   app->precision( 0.0001 );
@@ -26,20 +26,24 @@ int sample5(){
   // configure density distribution
   app->amplitude( 47.1337 );
   app->mean( 0.9038 );
-  app->sigma( 0.048 );
-  app->asym( 11.68 );
-
+  
+  AGaus *ag = dynamic_cast< AGaus* >( app->density() );
+  if( ag ){
+    ag->asigma( true,  0.56 );
+    ag->asigma( false, 0.048 );
+    app->update();
+  }
   // get wrapper class object for TF1
   double sig[2] = { 318.0, 325.0 };
   LineShape* lS = app->lineShapeObj();
-  TF1 *f1 = new TF1( "lineShape", lS, sig[0], sig[1], 5, "LineShape" );
+  TF1 *f1 = new TF1( "lineShape", lS, sig[0], sig[1], 4, "LineShape" );
   // set initial values
   f1->SetParameter( 0, app->amplitude() );
   f1->SetParameter( 1, app->mean() );
-  f1->SetParameter( 2, app->sigma() );
-  f1->SetParameter( 3, app->asym()  );
-  f1->FixParameter( 4, 0.0   );            // offset constant
-
+  if( ag ){
+    f1->SetParameter( 2, ag->asigma( true ) );
+    f1->SetParameter( 3, ag->asigma( false )  );
+  }
   // style setting
   f1->SetLineColor( kMagenta );
   f1->SetLineStyle( 2 );
