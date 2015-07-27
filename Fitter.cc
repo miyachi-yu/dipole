@@ -1,5 +1,7 @@
 #include "Fitter.hh"
 #include "MyApplication.hh"
+#include "AGaus.hh"
+#include "NearestNeighbor.hh"
 
 #include <TGraph.h>
 #include <cmath>
@@ -8,14 +10,23 @@ using namespace std;
 
 Fitter::Fitter() : TMinuit(), app_( NULL ), g_( NULL ),
 		   tmin_( 0.0 ), tmax_( 0.0 ) {
-
+  
   app_ = MyApplication::instance();
   int errflg;
   
-  this->mnparm( 0, "amplitude", app_->amplitude(), 1.0, 0.0, 1.0E+6, errflg );
-  this->mnparm( 1, "mean",      app_->mean(),      1.0, 0.0, 1.0E+6, errflg );
-  this->mnparm( 2, "sigma",     app_->sigma(),     1.0, 0.0, 1.0E+6, errflg );
-  this->mnparm( 3, "asym",      app_->asym(),      1.0, 0.0, 1.0E+6, errflg );
+  this->DefineParameter( 0, "amplitude", app_->amplitude(), 10.0,  0.0, 1.0E+6 );
+  this->DefineParameter( 1, "mean",      app_->mean(),       0.5,  0.0, 1.0E+6 );
+  
+  AGaus *ag = dynamic_cast< AGaus* >( app_->density() );
+  
+  if( ag ){
+    this->DefineParameter( 2, "sigmap", ag->asigma( true ),  0.5,  0.0, 1.0E+6 );
+    this->DefineParameter( 3, "sigmam", ag->asigma( false ), 0.01, 0.0, 1.0E+6 );
+  } else {
+    this->DefineParameter( 2, "sigma",     app_->sigma(),      0.01, 0.0, 1.0E+6 );
+  }
+  
+  //  this->DefineParameter( 3, "asym",      app_->asym(),       0.5,  0.0, 1.0E+6 );
 
 }
 
@@ -27,9 +38,14 @@ Int_t Fitter::Eval( Int_t npar, Double_t* grad,
   // set parameters
   app_->amplitude( par[ 0 ] );
   app_->mean(      par[ 1 ] );
-  app_->sigma(     par[ 2 ] );
-  app_->asym(      par[ 3 ] );
-
+  
+  AGaus *ag = dynamic_cast< AGaus* >( app_->density() );
+  if( ag ){
+    ag->asigma( true,  par[ 2 ] );
+    ag->asigma( false, par[ 3 ] );
+    app_->update();
+  }
+  
   fval = 0.0;
   
   for( int i = 0; i < g_->GetN(); i++ ){

@@ -7,14 +7,14 @@ namespace Transform {
   class RTransform;
 }
 //class DipoleKernel;
-class AGaus;
+class Density;
 
 class LineShape : public TObject {
 public:  
   double operator()( double *x, double *p );
   Transform::RTransform *rT_;
   //  DipoleKernel* k_;
-  AGaus *rho_;
+  Density *rho_;
   double base_;
   ClassDef( LineShape, 1.0 );
 };

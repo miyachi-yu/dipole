@@ -18,7 +18,7 @@ DipoleKernel::~DipoleKernel() {
   {\mu_0 \over 4\pi}{ 3\mu_e \over 2 } = -1.395E-30 T/m^3 = -1.395 mT/(nm)^3 
 */
 double DipoleKernel::localField( const double& r ){
-  return r != 0.0 ? -1.395 * pow( r, -3.0 ) : 0.0 ; 
+  return r > 0.0 ? -1.395 * pow( r, -3.0 ) : 0.0 ; 
 }
 
 double DipoleKernel::weight( const double& r ){
@@ -30,8 +30,10 @@ double DipoleKernel::weight( const double& r ){
 // r in nm
 // t() in mT
 double DipoleKernel::eval( const double& r ){
-  if( ! ( r > 0.0 ) ) return 0.0;
-  return this->weight( r ) * this->core( r, this->t() );
+  return
+    r > 0.0 ?
+    this->weight( r ) * this->core( r, this->t() ) :
+    0.0 ;
 }
 
 double DipoleKernel::core( const double& r, const double& t ){

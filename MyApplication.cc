@@ -119,19 +119,19 @@ void MyApplication::drawRho(){
   line_->SetLineStyle( 1 );
   
   line_->SetLineColor( kBlue );
-  line_->DrawLine( rho_->mean, ymin, rho_->mean, ymax );
+  line_->DrawLine( rho_->mean(), ymin, rho_->mean(), ymax );
   
   line_->SetLineStyle( 2 ); 
   line_->SetLineColor( kBlue + 2 );
-  line_->DrawLine( rho_->mean + rho_->asym * rho_->sigma,
+  line_->DrawLine( rho_->mean() + rho_->asigma( true ),
 		   ymin,
-		   rho_->mean + rho_->asym * rho_->sigma,
+		   rho_->mean() + rho_->asigma( true ),
 		   ymax );
   
   line_->SetLineColor( kBlue - 2 );
   line_->SetLineStyle( 3 );
-  line_->DrawLine( rho_->mean - rho_->sigma, ymin,
-		   rho_->mean - rho_->sigma, ymax );
+  line_->DrawLine( rho_->mean() - rho_->asigma( false ), ymin,
+		   rho_->mean() - rho_->asigma( false ), ymax );
   
   double txx  = xmin + 1.0 * dx;
   latex_->DrawLatex( txx, 8.5 * dy + ymin, rho_->text().c_str() );
@@ -162,17 +162,16 @@ void MyApplication::drawI( ESR *esr ){
 void MyApplication::drawI(){
     
   if( c_ ) c_->cd( 2 );
-
+  
   double tmin = tRange_[ 0 ] + k_->offset();
   double tmax = tRange_[ 1 ] + k_->offset();
 
   TGraph *g = new TGraph;
   
   // calculate value of the transfered function, g(t), at various t
-  double corr = 1.0 / (*rT_)( k_->offset() );
+  double corr = 1.0 / this->evalI( k_->offset() );
   for( double t = tmin; t < tmax; t += tstep_ ){
-    //    double v = I0_ * corr * (*rT_)( t );
-    double v = (*rT_)( t );
+    double v = this->evalI( t );
     int i = g->GetN();
     g->Set( i + 1 );
     g->SetPoint( i, t, v );
@@ -198,28 +197,28 @@ void MyApplication::drawI(){
   double ymax = g->GetYaxis()->GetXmax();
   double ymin = g->GetYaxis()->GetXmin();
   double dy   = 0.1 * ( ymax - ymin );
-
+  
   double dhcen = this->hDcenter();
   line_->SetLineWidth( 1 );
   line_->SetLineStyle( 1 );
   line_->SetLineColor( kBlue );
   line_->DrawLine( dhcen, ymin, dhcen, ymax );
   line_->DrawLine( 2.0 * k_->offset() - dhcen, ymin,
-		   -dhcen + 2.0*k_->offset(), ymax );
-  
-  double dhmin = this->hDlower();
-  line_->SetLineStyle( 2 );
-  line_->SetLineColor( kBlue + 2 );
-  line_->DrawLine( dhmin, ymin, dhmin, ymax );
-  line_->DrawLine( 2.0 * k_->offset() - dhmin, ymin,
-		   2.0 * k_->offset() - dhmin, ymax );
+		   2.0 * k_->offset() - dhcen, ymax );
   
   double dhmax = this->hDupper();
-  line_->SetLineStyle( 3 );
+  line_->SetLineStyle( 2 );
   line_->SetLineColor( kBlue - 2 );
   line_->DrawLine( dhmax, ymin, dhmax, ymax );
   line_->DrawLine( 2.0 * k_->offset() - dhmax, ymin,
 		   2.0 * k_->offset() - dhmax, ymax );
+  
+  double dhmin = this->hDlower();
+  line_->SetLineStyle( 3 );
+  line_->SetLineColor( kBlue + 2 );
+  line_->DrawLine( dhmin, ymin, dhmin, ymax );
+  line_->DrawLine( 2.0 * k_->offset() - dhmin, ymin,
+		   2.0 * k_->offset() - dhmin, ymax );
   
   double txx  = xmin + 0.6 * dx;
   latex_->DrawLatex( txx, 9.0 * dy + ymin, rho_->text().c_str() );
@@ -276,15 +275,15 @@ void MyApplication::drawArgument( const double& x, const double& y,
 }
 
 double MyApplication::hDlower(){
-  return k_->offset() + k_->localField( rho_->upper() );
+  return k_->offset() + k_->localField( rho_->mean() - rho_->asigma( false ) );
 }
 
 double MyApplication::hDcenter(){
-  return k_->offset() + k_->localField( rho_->mean );
+  return k_->offset() + k_->localField( rho_->mean() );
 }
 
 double MyApplication::hDupper(){
-  return k_->offset() + k_->localField( rho_->lower() );
+  return k_->offset() + k_->localField( rho_->mean() + rho_->asigma( true ) );
 }
 
 double MyApplication::toffset() { return k_->offset(); }
@@ -307,47 +306,53 @@ void MyApplication::precision( const double& p ){
 }
 
 void MyApplication::amplitude( const double& v ){
-  rho_->A = v;
+  rho_->amplitude( v );
 }
 
 void MyApplication::mean( const double& v ){
-  rho_->mean = v;
+  rho_->mean( v );
   this->update();
 }
 
 void MyApplication::sigma( const double& v ){
-  rho_->sigma = v;
+  rho_->sigma( v );
   this->update();
 }
 
 void MyApplication::asym( const double& v ){
-  rho_->asym = v;
+  rho_->asym( v );
   this->update();
 }
 
 double MyApplication::amplitude(){
-  return rho_->A;
+  return rho_->amplitude();
 }
 
 double MyApplication::mean(){
-  return rho_->mean;
+  return rho_->mean();
 }
 
 double MyApplication::sigma(){
-  return rho_->sigma;
+  return rho_->sigma();
 }
 
 double MyApplication::asym(){
-  return rho_->asym;
+  return rho_->asym();
 }
 
 void MyApplication::update(){
+
+  const double tlimit = 1.0E-3;
   
   rT_->upper( rho_->upper() );
   rT_->lower( rho_->lower() );
-  if( rT_->lower() < 0.0 ) rT_->lower( 0.0 );
+  if( rT_->lower() < tlimit ) rT_->lower( tlimit );
   
-  double trange = 1.5 * fabs( this->hDupper() - k_->offset() );
+  double trange = 1.5 * fabs( this->hDlower() - k_->offset() );
+  if( trange == 0.0 ) {
+    trange = 2.5 * fabs( this->hDcenter() - k_->offset() );
+  }
+  
   tRange_[ 0 ] = -trange;
   tRange_[ 1 ] =  trange;
   

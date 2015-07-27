@@ -1,20 +1,24 @@
 #include "LineShape.hh"
-#include "AGaus.hh"
+#include "Density.hh"
 #include <Tranform/RTransform.hh>
+
+#include "AGaus.hh"
 
 double LineShape::operator()( double* x, double *p ){
   
-  rho_->A     = p[ 0 ];
-  rho_->mean  = p[ 1 ];
-  rho_->sigma = p[ 2 ];
-  rho_->asym  = p[ 3 ];
+  rho_->amplitude( p[ 0 ] );
+  rho_->mean( p[ 1 ] );
   
-  rT_->upper( rho_->mean + 4.0 * rho_->sigma * rho_->asym );
-  rT_->lower( rho_->mean - 4.0 * rho_->sigma );
-  if( rT_->lower() < 0.0 ) rT_->lower( 0.0 );
+  AGaus *ag = dynamic_cast< AGaus* >( rho_ );
+  if( ag ){
+    ag->asigma( true,  p[ 2 ] );
+    ag->asigma( false, p[ 3 ] );
+  }
   
-  base_ = p[ 4 ];
-  return (*rT_)( x[ 0 ] ) + base_;
+  rT_->upper( rho_->upper() );
+  rT_->lower( rho_->lower() );
+
+  return (*rT_)( x[ 0 ] );
   
 }
 

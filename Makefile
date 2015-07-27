@@ -12,7 +12,7 @@ OBJS   = ESRData.o Rho.o MyKernel.o
 ## ----------------------------------------------------------------------- #
 ##                   ROOT Object Dictionary Management                     #
 ## ----------------------------------------------------------------------- #
-ROOTOBJS    = Fitter.o LineShape.o DipoleKernel.o KernelCore.o MixedDensity.o AGaus.o MyApplication.o ESRLine.o ESR.o ESRHeader.o ESRHeaderElement.o
+ROOTOBJS    = Fitter.o LineShape.o DipoleKernel.o KernelCore.o NearestNeighbor.o MixedDensity.o AGaus.o Density.o MyApplication.o ESRLine.o ESR.o ESRHeader.o ESRHeaderElement.o
 ROOTOBJ_HH  = $(patsubst %.o, %.hh, $(ROOTOBJS))
 ROOTLINKDEF = RootLinkDef.hh
 ROOTDICT_CC = RootObjDict.cc
@@ -65,6 +65,6 @@ $(ROOTDICT_CC) : $(ROOTOBJ_HH) $(ROOTLINKDEF)
 	$(ROOTSYS)/bin/$(ROOTCINT) -f $@ -c -I${prefix}/include $(ROOTOBJ_HH) $(ROOTLINKDEF)
 
 clean:
-	-@/bin/rm -f *.o *.*~
+	-@/bin/rm -f *.o *.*~ *.d
 
 -include $(patsubst %.o, %.d, $(OBJS))

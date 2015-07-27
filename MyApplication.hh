@@ -20,7 +20,7 @@ class TGraph;
 class TCanvas;
 
 class DipoleKernel;
-class AGaus;
+class Density;
 class LineShape;
 
 class ESR;
@@ -92,18 +92,20 @@ public:
   void nGrid( const int& n );
   void precision( const double& p );
 
-  AGaus* rho() { return rho_; } 
+  Density* density() { return rho_; } 
+  //  Density* rho() { return rho_; }       // will be merged to density method
   DipoleKernel* kernel(){ return k_; }
   
   LineShape* lineShapeObj();
   
   double evalI( const double& t );
-  
+
+  void update();
 private:
   static MyApplication* singleton_;
   
   DipoleKernel* k_;
-  AGaus* rho_;
+  Density* rho_;
   Transform::RTransform* rT_;
 
   TLine *line_;
@@ -117,7 +119,6 @@ private:
   double I0_;
   TGraph *gESR_;
   
-  void update();
   void canvas();
   
   ClassDef( MyApplication, 1 );

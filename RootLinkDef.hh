@@ -10,8 +10,10 @@
 #pragma link C++ class MyApplication+;
 #pragma link C++ class KernelCore+;
 #pragma link C++ class DipoleKernel+;
+#pragma link C++ class Density+;
 #pragma link C++ class AGaus+;
 #pragma link C++ class MixedDensity+;
+#pragma link C++ class NearestNeighbor+;
 #pragma link C++ class LineShape+;
 
 #pragma link C++ class ESRLine+;
